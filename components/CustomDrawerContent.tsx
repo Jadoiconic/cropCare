@@ -4,6 +4,7 @@ import { DrawerContentScrollView, DrawerItem, DrawerItemList } from '@react-navi
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 const CustomDrawerContent = (props: any) => {
     const { bottom, top } = useSafeAreaInsets()
@@ -24,7 +25,7 @@ const CustomDrawerContent = (props: any) => {
                 <TouchableOpacity
                     onPress={() => router.replace("/")}
                     style={{ flexDirection: 'row', gap: 20, alignItems: 'center' }}>
-                    <Ionicons name='home' size={24} color={'black'} />
+                    <MaterialCommunityIcons name="logout" size={24} color="black" />
                     <Text>Logout</Text>
                 </TouchableOpacity>
             </View>

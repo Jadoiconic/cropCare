@@ -12,12 +12,13 @@ export default function Layout() {
         drawerHideStatusBarOnOpen: true,
         drawerActiveBackgroundColor: '#5363df',
         drawerActiveTintColor: '#fff',
-        drawerLabelStyle: {marginLeft: -20}
+        drawerLabelStyle: { marginLeft: -20 }
       }}>
         <Drawer.Screen
-          name='index'
+          name='home'
           options={{
             drawerLabel: 'Home',
+            headerShown: false,
             headerTitle: 'Crop Care',
             drawerIcon: ({ size, color }) => (<Ionicons name='home' size={size} color={color} />)
           }}
