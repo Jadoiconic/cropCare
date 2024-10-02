@@ -1,37 +1,52 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
+import 'react-native-gesture-handler';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Drawer } from 'expo-router/drawer';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import CustomDrawerContent from '@/components/CustomDrawerContent';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
-
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
-  if (!loaded) {
-    return null;
-  }
-
+export default function Layout() {
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Drawer drawerContent={CustomDrawerContent} screenOptions={{
+        drawerHideStatusBarOnOpen: true,
+        drawerActiveBackgroundColor: '#5363df',
+        drawerActiveTintColor: '#fff',
+        drawerLabelStyle: {marginLeft: -20}
+      }}>
+        <Drawer.Screen
+          name='index'
+          options={{
+            drawerLabel: 'Home',
+            headerTitle: 'Crop Care',
+            drawerIcon: ({ size, color }) => (<Ionicons name='home' size={size} color={color} />)
+          }}
+        />
+        <Drawer.Screen
+          name='Notifications'
+          options={{
+            drawerLabel: 'Notifications',
+            headerTitle: 'Notifications',
+            drawerIcon: ({ size, color }) => (<FontAwesome name='bell' size={size} color={color} />)
+          }}
+        />
+        <Drawer.Screen
+          name='Profile'
+          options={{
+            drawerLabel: 'Profile',
+            headerTitle: 'Profile',
+            drawerIcon: ({ size, color }) => (<Ionicons name='person' size={size} color={color} />)
+          }}
+        />
+        <Drawer.Screen
+          name='Settings'
+          options={{
+            drawerLabel: 'Settings',
+            headerTitle: 'Settings',
+            drawerIcon: ({ size, color }) => (<Ionicons name="settings-sharp" size={size} color={color} />)
+          }}
+        />
+      </Drawer>
+    </GestureHandlerRootView>
   );
 }
