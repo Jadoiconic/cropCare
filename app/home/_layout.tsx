@@ -9,7 +9,7 @@ const _layout = () => {
     return (
         <Tabs screenOptions={{
             headerLeft: () => (<TouchableOpacity onPress={() => navigation.dispatch(DrawerActions.openDrawer())} style={{ paddingHorizontal: 10 }}><Entypo name="menu" size={24} color="black" /></TouchableOpacity>),
-            headerRight: () => (<TouchableOpacity onPress={() => {}} style={{ paddingHorizontal: 10 }}><Ionicons name="person-circle-outline" size={30} color="black" /></TouchableOpacity>)
+            headerRight: () => (<TouchableOpacity onPress={() => { }} style={{ paddingHorizontal: 10 }}><Ionicons name="person-circle-outline" size={30} color="black" /></TouchableOpacity>),
         }}>
             <Tabs.Screen
                 name='index'
@@ -32,9 +32,18 @@ const _layout = () => {
             <Tabs.Screen
                 name='Forum'
                 options={{
-                    title: "Home",
+                    title: "Forum",
                     tabBarIcon: ({ size, color }) => (
                         <AntDesign name='message1' size={size} color={color} />
+                    )
+                }}
+            />
+            <Tabs.Screen
+                name='Profile'
+                options={{
+                    title: "Profile",
+                    tabBarIcon: ({ size, color }) => (
+                        <Ionicons name='person' size={size} color={color} />
                     )
                 }}
             />

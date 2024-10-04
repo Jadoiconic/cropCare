@@ -32,11 +32,11 @@ export default function Layout() {
           }}
         />
         <Drawer.Screen
-          name='Profile'
+          name='Lessons'
           options={{
-            drawerLabel: 'Profile',
-            headerTitle: 'Profile',
-            drawerIcon: ({ size, color }) => (<Ionicons name='person' size={size} color={color} />)
+            drawerLabel: 'Lessons',
+            headerTitle: 'Lessons',
+            drawerIcon: ({ size, color }) => (<Ionicons name='book' size={size} color={color} />)
           }}
         />
         <Drawer.Screen
