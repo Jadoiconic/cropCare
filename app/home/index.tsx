@@ -1,12 +1,11 @@
-import { StyleSheet, TouchableOpacity, Text, View } from 'react-native'
-import React from 'react'
-import Greeting from '@/components/Greeting'
-import { ScrollView } from 'react-native-gesture-handler'
-import { useRouter } from 'expo-router'
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
+import { StyleSheet, TouchableOpacity, Text, View, ScrollView } from 'react-native';
+import React from 'react';
+import Greeting from '@/components/Greeting';
+import { useRouter } from 'expo-router';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
-const index = () => {
-    const router = useRouter()
+const Index = () => { // Renamed to uppercase
+    const router = useRouter();
     return (
         <ScrollView style={styles.container}>
             <Greeting />
@@ -14,22 +13,18 @@ const index = () => {
             <View style={styles.gridContainer}>
                 <View style={styles.row}>
                     <TouchableOpacity
-                        onPress={() => {
-
-                            router.replace("/home/stack/Weather");
-                        }}
+                        onPress={() => router.push("/Weather")} // Changed to push
                         style={styles.cardContainer}
+                        accessibilityLabel="Navigate to Weather Screen"
                     >
                         <Ionicons name="cloud" size={40} color="#4A90E2" />
-                        <Text style={styles.cardLabel}>Iteganya gihe</Text>
+                        <Text style={styles.cardLabel}>Iteganya igihe</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        onPress={() => {
-
-                            router.replace("/home/stack/Lessons");
-                        }}
+                        onPress={() => router.push("/Lessons")} // Changed to push
                         style={styles.cardContainer}
+                        accessibilityLabel="Navigate to Lessons Screen"
                     >
                         <Ionicons name="stats-chart-outline" size={40} color="#8BC34A" />
                         <Text style={styles.cardLabel}>Amasomo kubuhinzi</Text>
@@ -38,21 +33,17 @@ const index = () => {
 
                 <View style={styles.row}>
                     <TouchableOpacity
-                        onPress={() => {
-
-                            router.replace("/home/stack/CropManagement");
-                        }}
+                        onPress={() => router.push("/CropManagement")} // Changed to push
                         style={styles.cardContainer}
+                        accessibilityLabel="Navigate to Crop Management Screen"
                     >
                         <Ionicons name="leaf-outline" size={40} color="#8BC34A" />
                         <Text style={styles.cardLabel}>Gukurikirana Igihingwa</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        onPress={() => {
-
-                            router.replace("/home/Forum");
-                        }}
+                        onPress={() => router.push("/home/Forum")} // Changed to push
                         style={styles.cardContainer}
+                        accessibilityLabel="Navigate to Forum Screen"
                     >
                         <Ionicons name="people-outline" size={40} color="#8BC34A" />
                         <Text style={styles.cardLabel}>Uruganiriro</Text>
@@ -60,21 +51,17 @@ const index = () => {
                 </View>
                 <View style={styles.row}>
                     <TouchableOpacity
-                        onPress={() => {
-
-                            router.replace("/home/stack/Watering");
-                        }}
+                        onPress={() => router.push("/Watering")} // Changed to push
                         style={styles.cardContainer}
+                        accessibilityLabel="Navigate to Watering Screen"
                     >
                         <MaterialCommunityIcons name="watering-can-outline" size={40} color="#8BC34A" />
                         <Text style={styles.cardLabel}>Kuhira no Kuvomera</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        onPress={() => {
-
-                            router.replace("/home/stack/Pests");
-                        }}
+                        onPress={() => router.push("/Pests")} // Changed to push
                         style={styles.cardContainer}
+                        accessibilityLabel="Navigate to Pests Screen"
                     >
                         <Ionicons name="bug-outline" size={40} color="#8BC34A" />
                         <Text style={styles.cardLabel}>Ibyonyi n' Indwara</Text>
@@ -82,23 +69,27 @@ const index = () => {
                 </View>
             </View>
         </ScrollView>
-    )
+    );
 }
 
-export default index
+export default Index; // Updated to match the component name
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1
+        flex: 1,
     },
     gridContainer: {
-        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#f0f0f0',
     },
     row: {
         flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        width: '100%',
+        paddingHorizontal: 20,
+        marginVertical: 10,
     },
     cardContainer: {
         backgroundColor: '#fff',
@@ -111,8 +102,8 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
         shadowOffset: { width: 0, height: 5 },
         elevation: 3,
-        width: 150,
-        height: 150,
+        width: '45%', // Responsive width
+        aspectRatio: 1, // Maintain square shape
         margin: 10,
     },
     cardLabel: {
@@ -122,4 +113,4 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         color: '#333',
     },
-})
+});

@@ -6,6 +6,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import CustomDrawerContent from '@/components/CustomDrawerContent';
 import { useState, useEffect } from 'react';
 import { Stack, useRouter } from 'expo-router';
+import { FontAwesome5 } from '@expo/vector-icons';
 
 export default function Layout() {
   const [user, setUser] = useState<Object | null>(null);  // Initially, user is null (not authenticated)
@@ -48,26 +49,67 @@ export default function Layout() {
         <Drawer.Screen
           name='home'
           options={{
-            drawerLabel: 'Home',
+            drawerLabel: 'Ahabanza',
             headerShown: false,
             headerTitle: 'Crop Care',
             drawerIcon: ({ size, color }) => (<Ionicons name='home' size={size} color={color} />)
           }}
         />
+
         <Drawer.Screen
-          name='Notifications'
+          name='Weather'
           options={{
-            drawerLabel: 'Notifications',
-            headerTitle: 'Notifications',
-            drawerIcon: ({ size, color }) => (<FontAwesome name='bell' size={size} color={color} />)
+            drawerLabel: 'Iteganyagihe',
+            headerTitle: 'Iteganyagihe',
+            drawerIcon: ({ size, color }) => (<Ionicons name='cloud' size={size} color={color} />)
+          }}
+        />
+        <Drawer.Screen
+          name='CropManagement'
+          options={{
+            drawerLabel: 'Gukurikirana Igihingwa',
+            headerTitle: 'Gukurikirana Igihingwa',
+            drawerIcon: ({ size, color }) => (<Ionicons name='leaf-outline' size={size} color={color} />)
+          }}
+        />
+        <Drawer.Screen
+          name='Lessons'
+          options={{
+            drawerLabel: 'Amasomo kubuhinzi',
+            headerTitle: 'Amasomo kubuhinzi',
+            drawerIcon: ({ size, color }) => (<Ionicons name='book' size={size} color={color} />)
+          }}
+        />
+        <Drawer.Screen
+          name='Pests'
+          options={{
+            drawerLabel: 'Ibyonyi & Indwara',
+            headerTitle: 'Ibyonyi & Indwara',
+            drawerIcon: ({ size, color }) => (<FontAwesome5 name="hand-holding-water" size={size} color={color} />)
+          }}
+        />
+        <Drawer.Screen
+          name='Watering'
+          options={{
+            drawerLabel: 'Kuhira no Kuvomera',
+            headerTitle: 'Kuhira no Kuvomera',
+            drawerIcon: ({ size, color }) => (<Ionicons name='bug-outline' size={size} color={color} />)
+          }}
+        />
+        <Drawer.Screen
+          name='Discover'
+          options={{
+            drawerLabel: 'Menya Ibindi',
+            headerTitle: 'Menya Ibindi',
+            drawerIcon: ({ size, color }) => (<FontAwesome name='compass' size={size} color={color} />)
           }}
         />
 
         <Drawer.Screen
           name='index'
           options={{
-            drawerLabel: 'Settings',
-            headerTitle: 'Settings',
+            drawerLabel: 'Igenamiterere',
+            headerTitle: 'Igenamiterere',
             drawerIcon: ({ size, color }) => (<Ionicons name="settings-sharp" size={size} color={color} />)
           }}
         />

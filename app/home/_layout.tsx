@@ -49,6 +49,15 @@ const _layout = () => {
                 }}
             />
             <Tabs.Screen
+                name='Notifications'
+                options={{
+                    title: "Notification",
+                    tabBarIcon: ({ size, color }) => (
+                        <FontAwesome name='bell' size={size} color={color} />
+                    )
+                }}
+            />
+            <Tabs.Screen
                 name='Profile'
                 options={{
                     title: "Profile",
