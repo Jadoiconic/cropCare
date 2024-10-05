@@ -40,11 +40,11 @@ const Weather: React.FC = () => {
         }
     };
 
-    // Fetch weather data based on coordinates using One Call API
+    // Fetch weather data based on coordinates using fetch API
     const fetchWeatherData = async (lat: number, lon: number) => {
         try {
             const response = await fetch(
-                `https://api.openweathermap.org/data/2.5/onecall?lat=${lat}&lon=${lon}&exclude=minutely,hourly&appid=${apiKey}&units=metric`
+                `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`
             );
             if (!response.ok) {
                 throw new Error('Failed to fetch weather data');
@@ -73,42 +73,68 @@ const Weather: React.FC = () => {
     const simplifyDescription = (description: string) => {
         switch (description) {
             case 'clear sky':
-                return 'Clear Sky';
+                return 'Ikirere Gisaneza';
             case 'few clouds':
-                return 'A Few Clouds';
+                return 'Ibicu Bicye';
             case 'scattered clouds':
-                return 'Scattered Clouds';
+                return 'Ibicu bitatanye';
             case 'broken clouds':
-                return 'Broken Clouds';
+                return 'Igicu Kiremereye';
             case 'shower rain':
-                return 'Light Rain';
+                return 'Imvura Yoroheje';
             case 'rain':
-                return 'Rainy';
+                return 'Imvura Nyinshi';
             case 'thunderstorm':
-                return 'Thunderstorm';
+                return 'Inkuba';
             case 'snow':
-                return 'Snowy';
+                return 'Urubura';
             case 'mist':
-                return 'Foggy';
+                return 'Igihu';
             default:
-                return description.charAt(0).toUpperCase() + description.slice(1);
+                return "Igicu cyijimye";
         }
     };
 
-    // Render the current weather card
+    // Generate farming advice based on weather description
+    const getFarmingAdvice = (description: string) => {
+        switch (description) {
+            case 'clear sky':
+                return 'Numunsi mwiza wo gusarura imyaka cyangwa kuhira imirima yawe.';
+            case 'few clouds':
+                return 'Umunsi mwiza wo gufata neza ubuhinzi. Menya neza ko ibihingwa byuhira neza.';
+            case 'scattered clouds':
+                return 'Igicu ariko cyumye - igihe cyiza cyo gutera imbuto cyangwa kugenzura uburyo bwo kuhira.';
+            case 'broken clouds':
+                return 'Witondere impinduka zishobora kubaho mubihe. Kurikirana ibihingwa neza.';
+            case 'shower rain':
+                return 'Imvura yoroheje nibyiza kubihingwa byawe. Nta mpamvu yo kuhira uyu munsi.';
+            case 'rain':
+                return 'Imvura nyinshi ishobora gutera amazi. Reba amazi mumirima yawe.';
+            case 'thunderstorm':
+                return 'Guma mu nzu kandi urinde ibikoresho byawe byo guhinga. Irinde imirimo yo mu murima mugihe cy\'inkuba.';
+            case 'snow':
+                return 'Kurinda amatungo n\'ibihingwa imbeho.Tekereza uburyo bwo gushyushya cyangwa gutwikira imyaka.';
+            case 'mist':
+                return 'Ibihe bibi bishobora kongera ubushuhe; gukurikirana ibihingwa byawe byindwara zifata.';
+            default:
+                return 'Ikirere ntigiteganijwe. Menya neza ko ufata ingamba zo guhinga n\'ibikoresho byawe.';
+        }
+    };
+
+    // Render the current weather card with farming advice
     const renderCurrentWeather = () => {
         if (!weatherData) {
             return <Text style={styles.infoText}>{locationMessage}</Text>;
         }
 
-        const currentWeather = weatherData.current;
+        const currentWeather = weatherData.list[0];
         const description = currentWeather.weather[0].description;
-        const temp = currentWeather.temp;
+        const temp = currentWeather.main.temp;
         const iconCode = currentWeather.weather[0].icon;
 
         return (
             <View style={styles.weatherCard}>
-                <Text style={styles.cardTitle}>Current Weather</Text>
+                <Text style={styles.cardTitle}>Ikirere Cyubu</Text>
                 <Text style={styles.locationText}>{detailedLocation}</Text>
                 <View style={styles.weatherRow}>
                     <Image
@@ -120,42 +146,58 @@ const Weather: React.FC = () => {
                         <Text style={styles.description}>{simplifyDescription(description)}</Text>
                     </View>
                 </View>
+                <View style={{ borderRadius: 10, overflow: 'hidden', padding: 10, backgroundColor: '#dfe6e9', }}>
+                    <Text style={styles.adviceText}>
+                        {getFarmingAdvice(simplifyDescription(description))}
+                    </Text>
+                </View>
             </View>
         );
     };
 
     // Render 7-day forecast
-    const renderDailyForecast = () => {
-        if (!weatherData || !weatherData.daily) return null;
+    const render7DayForecast = () => {
+        if (!weatherData) return null;
 
-        return weatherData.daily.slice(1, 8).map((day: any, index: number) => {
-            const date = new Date(day.dt * 1000).toLocaleDateString(undefined, { weekday: 'long' });
-            const description = simplifyDescription(day.weather[0].description);
-            const temp = day.temp.day;
-            const iconCode = day.weather[0].icon;
+        // Get unique days for the forecast
+        const dailyForecast = weatherData.list.filter((item: any) =>
+            item.dt_txt.endsWith("12:00:00") // Getting forecasts at 12:00 PM (noon)
+        );
 
-            return (
-                <View key={index} style={styles.dailyCard}>
-                    <Text style={styles.dayText}>{date}</Text>
-                    <Image
-                        source={{ uri: `https://openweathermap.org/img/w/${iconCode}.png` }}
-                        style={styles.weatherIcon}
-                    />
-                    <Text style={styles.dailyTemp}>{temp}°C</Text>
-                    <Text style={styles.dailyDescription}>{description}</Text>
-                </View>
-            );
-        });
+        return (
+            <View style={styles.forecastContainer}>
+                {dailyForecast.map((forecast: any, index: number) => {
+                    const date = new Date(forecast.dt * 1000);
+                    const day = date.toLocaleDateString('en-US', { weekday: 'long' });
+                    const description = simplifyDescription(forecast.weather[0].description);
+                    const temp = forecast.main.temp;
+                    const iconCode = forecast.weather[0].icon;
+
+                    return (
+                        <View key={index} style={styles.forecastCard}>
+                            <Text style={styles.forecastDay}>{day}</Text>
+                            <Image
+                                source={{ uri: `https://openweathermap.org/img/w/${iconCode}.png` }}
+                                style={styles.forecastIcon}
+                            />
+                            <Text style={styles.forecastTemp}>{temp}°C</Text>
+                            <Text style={styles.forecastDescription}>{description}</Text>
+                        </View>
+                    );
+                })}
+            </View>
+        );
     };
 
     return (
         <ScrollView contentContainerStyle={styles.container}>
-            <Text style={styles.appTitle}>Weather App</Text>
             {weatherData ? (
                 <>
                     {renderCurrentWeather()}
-                    <Text style={styles.sectionTitle}>7-Day Forecast</Text>
-                    {renderDailyForecast()}
+                    <View>
+                        <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#4A90E2' }}> Iteganyagihe Ry'Iminsi 7</Text>
+                    </View>
+                    {render7DayForecast()}
                 </>
             ) : (
                 <ActivityIndicator size="large" color="#00ff00" />
@@ -171,13 +213,6 @@ const styles = StyleSheet.create({
         flexGrow: 1,
         padding: 16,
         backgroundColor: '#f5f5f5',
-    },
-    appTitle: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#4A90E2',
-        textAlign: 'center',
-        marginBottom: 16,
     },
     infoText: {
         textAlign: 'center',
@@ -222,18 +257,23 @@ const styles = StyleSheet.create({
         color: '#4A90E2',
     },
     description: {
-        fontSize: 20,
-        color: '#4A90E2',
-    },
-    sectionTitle: {
         fontSize: 24,
+        color: 'black',
         fontWeight: 'bold',
-        color: '#4A90E2',
-        marginBottom: 16,
-        textAlign: 'center',
+        marginHorizontal: 10,
+        marginVertical: 6
     },
-    dailyCard: {
-        padding: 16,
+    adviceText: {
+        fontSize: 20,
+        color: 'green',
+        marginTop: 8,
+        textAlign: 'center',
+        fontWeight: 'bold',
+        borderRadius: 10
+    },
+    forecastContainer: {
+        marginTop: 20,
+        padding: 10,
         backgroundColor: '#fff',
         borderRadius: 12,
         shadowColor: '#000',
@@ -241,27 +281,33 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 6,
         elevation: 3,
-        marginBottom: 20,
+    },
+    forecastCard: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        paddingVertical: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
     },
-    dayText: {
+    forecastDay: {
+        fontSize: 18,
+        color: '#333',
+        flex: 1,
+    },
+    forecastIcon: {
+        width: 40,
+        height: 40,
+    },
+    forecastTemp: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#4A90E2',
+        color: '#333',
     },
-    dailyTemp: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: '#4A90E2',
-    },
-    dailyDescription: {
+    forecastDescription: {
         fontSize: 16,
-        color: '#4A90E2',
-    },
-    dailyWeatherIcon: {
-        width: 50,
-        height: 50,
+        color: '#666',
+        flex: 2,
+        textAlign: 'right',
     },
 });

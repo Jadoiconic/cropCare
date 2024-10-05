@@ -3,7 +3,6 @@ import React from 'react'
 import { DrawerContentScrollView, DrawerItem, DrawerItemList } from '@react-navigation/drawer'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Ionicons } from '@expo/vector-icons'
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 const CustomDrawerContent = (props: any) => {
@@ -16,14 +15,14 @@ const CustomDrawerContent = (props: any) => {
                 <View style={styles.header}>
                     <Text style={styles.title}>Admin Menu</Text>
                 </View>
-                <View style={{ backgroundColor: '#fff', paddingTop: 10  }}>
+                <View style={{ backgroundColor: '#fff', paddingTop: 10 }}>
                     <DrawerItemList {...props} />
                     {/* <DrawerItem label={`Logout ${bottom}`} onPress={() => router.replace("/")} /> */}
                 </View>
             </DrawerContentScrollView>
             <View style={styles.footer}>
                 <TouchableOpacity
-                    onPress={() => router.replace("/")}
+                    onPress={() => router.replace("/home")}
                     style={{ flexDirection: 'row', gap: 20, alignItems: 'center' }}>
                     <MaterialCommunityIcons name="logout" size={24} color="black" />
                     <Text>Logout</Text>
@@ -49,7 +48,7 @@ const styles = StyleSheet.create({
         color: '#fff'
     },
     footer: {
-        borderTopColor: '#ddefe',
+        borderTopColor: '#eee',
         borderTopWidth: 1,
         padding: 20,
         paddingBottom: 20

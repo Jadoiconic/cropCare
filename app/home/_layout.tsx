@@ -8,8 +8,18 @@ const _layout = () => {
     const navigation = useNavigation()
     return (
         <Tabs screenOptions={{
-            headerLeft: () => (<TouchableOpacity onPress={() => navigation.dispatch(DrawerActions.openDrawer())} style={{ paddingHorizontal: 10 }}><Entypo name="menu" size={24} color="black" /></TouchableOpacity>),
-            headerRight: () => (<TouchableOpacity onPress={() => { }} style={{ paddingHorizontal: 10 }}><Ionicons name="person-circle-outline" size={30} color="black" /></TouchableOpacity>),
+            headerLeft: () => (<TouchableOpacity onPress={() => navigation.dispatch(DrawerActions.openDrawer())} style={{ paddingHorizontal: 10 }}><Entypo name="menu" size={24} color="white" /></TouchableOpacity>),
+            headerRight: () => (<TouchableOpacity onPress={() => { }} style={{ paddingHorizontal: 10 }}><Ionicons name="person-circle-outline" size={30} color="white" /></TouchableOpacity>),
+            tabBarActiveTintColor: 'green',
+            tabBarLabelStyle: {
+                fontWeight: 'bold'
+            },
+            headerStyle: {
+                backgroundColor: 'green',
+            },
+            headerTitleStyle: {
+                color: 'white'
+            }
         }}>
             <Tabs.Screen
                 name='index'
@@ -23,7 +33,7 @@ const _layout = () => {
             <Tabs.Screen
                 name='Discover'
                 options={{
-                    title: "Home",
+                    title: "Discover",
                     tabBarIcon: ({ size, color }) => (
                         <FontAwesome name="compass" size={size} color={color} />
                     )
