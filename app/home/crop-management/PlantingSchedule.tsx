@@ -14,11 +14,12 @@ import { useRouter } from 'expo-router'; // Corrected import
 const PlantingSchedule: React.FC = () => {
     const [plantingDate, setPlantingDate] = useState<Date | null>(null);
     const [userId, setUserId] = useState<string | null>(null);
-    const [cropType, setCropType] = useState<'Maize' | 'Potatoes' | null>(null);
+    const [cropType, setCropType] = useState<'Ibigori' | 'Ibirayi' | null>(null);
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [performedActions, setPerformedActions] = useState<string>('');
     const [farmName, setFarmName] = useState<string>('');
     const [scheduleList, setScheduleList] = useState<any[]>([]);
+    const [remainingDays, setRemainingDays] = useState('');
 
     const router = useRouter(); // Initialize router
 
@@ -62,9 +63,13 @@ const PlantingSchedule: React.FC = () => {
                     // Convert any Firebase Timestamp objects to readable dates
                     const formattedSchedules = scheduleData.map(item => ({
                         ...item,
-                        plantingDate: formatDate(item.plantingDate),
-                        actionPerformedDate: formatDate(item.actionPerformedDate),
+                        plantingDate: new Date(item.plantingDate), // Convert to Date object
+                        actionPerformedDate: new Date(item.actionPerformedDate), // Convert to Date object
                     }));
+
+                    // Sort the schedules by plantingDate in descending order
+                    formattedSchedules.sort((a, b) => b.plantingDate - a.plantingDate);
+
                     setScheduleList(formattedSchedules);
                 }
             }
@@ -72,6 +77,7 @@ const PlantingSchedule: React.FC = () => {
             console.error('Failed to load local schedule:', error);
         }
     };
+
 
     // Helper function to format the date
     const formatDate = (date: any) => {
@@ -90,6 +96,8 @@ const PlantingSchedule: React.FC = () => {
         }
     };
 
+
+
     // Save the planting date, crop type, and schedule in Firestore and local storage
     const savePlantingDate = async () => {
         if (!plantingDate || !cropType || performedActions.trim() === '' || farmName.trim() === '') {
@@ -101,8 +109,10 @@ const PlantingSchedule: React.FC = () => {
             const newScheduleData = {
                 cropName: cropType,
                 userId,
+                status: "Pending",
                 farmName,
                 plantingDate: plantingDate.toDateString(),
+                planningDate: new Date(plantingDate.getTime() + 30 * 24 * 60 * 60 * 1000).toDateString(),
                 performedActions: performedActions,
                 actionPerformedDate: new Date().toDateString(),
             };
@@ -114,8 +124,13 @@ const PlantingSchedule: React.FC = () => {
             const localSchedule = await AsyncStorage.getItem('localPlantingSchedule');
             const existingSchedules = localSchedule ? JSON.parse(localSchedule) : [];
 
-            // Append the new schedule entry
-            const updatedSchedules = Array.isArray(existingSchedules) ? [...existingSchedules, newScheduleData] : [newScheduleData];
+            // Append the new schedule entry and sort it
+            const updatedSchedules = Array.isArray(existingSchedules)
+                ? [...existingSchedules, newScheduleData]
+                : [newScheduleData];
+
+            // Sort the schedules by plantingDate in descending order
+            updatedSchedules.sort((a, b) => new Date(b.plantingDate) - new Date(a.plantingDate));
 
             // Save the updated schedules back to AsyncStorage
             await AsyncStorage.setItem('localPlantingSchedule', JSON.stringify(updatedSchedules));
@@ -130,6 +145,43 @@ const PlantingSchedule: React.FC = () => {
         } catch (error) {
             Alert.alert('Save Error', 'Failed to save the planting schedule to the database.');
             console.error('Firestore Error:', error);
+        }
+    };
+
+
+    // Function to delete a schedule
+    const deleteSchedule = async (index: number) => {
+        try {
+            // Remove the schedule from the state list
+            const updatedScheduleList = [...scheduleList];
+            updatedScheduleList.splice(index, 1);
+            setScheduleList(updatedScheduleList);
+
+            // Update the local storage
+            await AsyncStorage.setItem('localPlantingSchedule', JSON.stringify(updatedScheduleList));
+
+            Alert.alert('Success', 'Schedule deleted successfully.');
+        } catch (error) {
+            console.error('Error deleting schedule:', error);
+            Alert.alert('Delete Error', 'Failed to delete the schedule.');
+        }
+    };
+
+    // Function to edit a schedule
+    const approveSchedule = async (index: number) => {
+        try {
+            // Update the status to 'Approved'
+            const updatedScheduleList = [...scheduleList];
+            updatedScheduleList[index].status = 'Approved';
+            setScheduleList(updatedScheduleList);
+
+            // Update local storage
+            await AsyncStorage.setItem('localPlantingSchedule', JSON.stringify(updatedScheduleList));
+
+            Alert.alert('Success', 'Schedule approved successfully.');
+        } catch (error) {
+            console.error('Error approving schedule:', error);
+            Alert.alert('Approve Error', 'Failed to approve the schedule.');
         }
     };
 
@@ -169,12 +221,25 @@ const PlantingSchedule: React.FC = () => {
         }
     };
 
+    const calculateRemainingDays = (targetDate) => {
+        const today = new Date();
+        const target = new Date(targetDate);
+
+        // Calculate the time difference in milliseconds
+        const timeDifference = target - today;
+
+        // Convert time difference from milliseconds to days
+        const remainingDays = Math.ceil(timeDifference / (1000 * 60 * 60 * 24));
+
+        return remainingDays >= 0 ? remainingDays : 'Expired';
+    };
+
     // Generate the message for weekly notifications
     const getWeeklyNotificationMessage = (week: number): string => {
-        if (cropType === 'Potatoes') {
+        if (cropType === 'Ibirayi') {
             return week % 2 === 0 ? 'Time to apply fertilizer to boost potato growth.' : 'Check for pests and diseases in your potato fields.';
-        } else if (cropType === 'Maize') {
-            return week % 3 === 0 ? 'Apply pest control to protect your maize crops from insects.' : 'Irrigate your maize fields to maintain soil moisture.';
+        } else if (cropType === 'Ibigori') {
+            return week % 3 === 0 ? 'Apply pest control to protect your Ibigori crops from insects.' : 'Irrigate your Ibigori fields to maintain soil moisture.';
         }
         return 'Remember to check your crops!';
     };
@@ -188,56 +253,100 @@ const PlantingSchedule: React.FC = () => {
 
     return (
         <ScrollView style={styles.container}>
-            <Text style={styles.title}>Planting Schedule Setup</Text>
+            <Text style={styles.title}>Igihe cyo gutera</Text>
             <View style={styles.cropSelection}>
                 <TouchableOpacity
-                    style={[styles.cropButton, cropType === 'Maize' && styles.selectedButton]}
-                    onPress={() => setCropType('Maize')}
+                    style={[styles.cropButton, cropType === 'Ibigori' && styles.selectedButton]}
+                    onPress={() => setCropType('Ibigori')}
                 >
-                    <MaterialCommunityIcons name="corn" size={30} color={cropType === 'Maize' ? 'white' : 'black'} />
-                    <Text style={styles.buttonText}>Maize</Text>
+                    <MaterialCommunityIcons name="corn" size={30} color={cropType === 'Ibigori' ? 'white' : 'black'} />
+                    <Text style={styles.buttonText}>Ibigori</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={[styles.cropButton, cropType === 'Potatoes' && styles.selectedButton]}
-                    onPress={() => setCropType('Potatoes')}
+                    style={[styles.cropButton, cropType === 'Ibirayi' && styles.selectedButton]}
+                    onPress={() => setCropType('Ibirayi')}
                 >
-                    <MaterialCommunityIcons name="nutrition" size={30} color={cropType === 'Potatoes' ? 'white' : 'black'} />
-                    <Text style={styles.buttonText}>Potatoes</Text>
+                    <MaterialCommunityIcons name="nutrition" size={30} color={cropType === 'Ibirayi' ? 'white' : 'black'} />
+                    <Text style={styles.buttonText}>Ibirayi</Text>
                 </TouchableOpacity>
             </View>
-            <Button title="Select Planting Date" onPress={() => setShowDatePicker(true)} />
+            <Button title="Kanda hano uhitemo itariki watereyeho" onPress={() => setShowDatePicker(true)} />
             {showDatePicker && (
-                <DateTimePicker value={plantingDate || new Date()} mode="date" display="default" onChange={handleDateChange} />
+                <DateTimePicker
+                    maximumDate={new Date()} value={plantingDate || new Date()} mode="date" display="default" onChange={handleDateChange} />
             )}
             <TextInput
                 style={styles.input}
-                placeholder="Enter performed actions (e.g., Irrigation, Fertilizing)"
+                placeholder="Igikorwa giteganijwe (e.g., Irrigation, Fertilizing)"
                 value={performedActions}
                 onChangeText={setPerformedActions}
             />
             <TextInput
                 style={styles.input}
-                placeholder="Enter Farm Name (e.g., Karambi)"
+                placeholder="Aho umurima uherereye (e.g: Karambi)"
                 value={farmName}
                 onChangeText={setFarmName}
             />
-            <Button title="Save Planting Date" onPress={savePlantingDate} color="green" />
+            <TouchableOpacity onPress={savePlantingDate} style={{ backgroundColor: '#0984e3', padding: 10, borderRadius: 5, marginTop: 10, alignContent:'center' }}>
+                <Text style={{color:'white', textAlign:'center', fontWeight:'bold', fontSize:20}}>Bika amakuru!</Text>
+            </TouchableOpacity>
 
             {/* Display Table of Planting Schedules */}
             {scheduleList.length > 0 && (
                 <View style={styles.tableContainer}>
-                    <Text style={styles.tableHeader}>Saved Planting Schedules</Text>
+                    <Text style={styles.tableHeader}>Ibiteganijwe</Text>
                     <FlatList
                         data={scheduleList}
                         scrollEnabled={false}
                         keyExtractor={(item, index) => index.toString()}
-                        renderItem={({ item }) => (
+                        renderItem={({ item, index }) => (
                             <View style={styles.tableRow}>
-                                <Text style={styles.tableCell}>{item.cropName || 'N/A'}</Text>
-                                <Text style={styles.tableCell}>{formatDate(item.plantingDate) || 'N/A'}</Text>
-                                <Text style={styles.tableCell}>{item.performedActions || 'N/A'}</Text>
-                                <Text style={styles.tableCell}>{formatDate(item.actionPerformedDate) || 'N/A'}</Text>
+                                <Text style={styles.tableCell}>
+                                    <Text style={styles.label}>Igihingwa: </Text>
+                                    {item.cropName || 'N/A'}
+                                </Text>
+                                <Text style={styles.tableCell}>
+                                    <Text style={styles.label}>Gutera: </Text>
+                                    {formatDate(item.plantingDate) || 'N/A'}
+                                </Text>
+                                <Text style={styles.tableCell}>
+                                    <Text style={styles.label}>Umurima: </Text>
+                                    {item.farmName || 'N/A'}
+                                </Text>
+                                <Text style={styles.tableCell}>
+                                    <Text style={styles.label}>Igikorwa: </Text>
+                                    {item.performedActions || 'N/A'}
+                                </Text>
+                                <Text style={styles.tableCell}>
+                                    <Text style={styles.label}>Byakozwe: </Text>
+                                    {formatDate(item.actionPerformedDate) || 'N/A'}
+                                </Text>
+                                <Text style={styles.tableCell}>
+                                    <Text style={styles.label}>Aho bigeze: </Text>
+                                    {formatDate(item.status) || 'N/A'}
+                                </Text>
+                                <Text style={styles.tableCell}>
+                                    <Text style={styles.label}>Duration: </Text>
+                                    {calculateRemainingDays(item.planningDate) !== 'Expired'
+                                        ? `${calculateRemainingDays(item.planningDate)} days remaining`
+                                        : 'Expired'}
+                                </Text>
+
+                                <View style={styles.buttonRow}>
+                                    <Button
+                                        title="Delete"
+                                        onPress={() => deleteSchedule(index)}
+                                        color="#ff4d4d"
+                                    />
+                                    <Button
+                                        title="Approve"
+                                        onPress={() => approveSchedule(index)}
+                                        color="#5cb85c"
+                                    />
+                                </View>
+
                             </View>
+
                         )}
                     />
                 </View>
@@ -258,6 +367,31 @@ const styles = StyleSheet.create({
     input: { height: 40, borderColor: 'gray', borderWidth: 1, marginBottom: 20, paddingHorizontal: 10, borderRadius: 5 },
     tableContainer: { marginTop: 20, backgroundColor: '#FFF3E0', borderRadius: 10, padding: 10 },
     tableHeader: { fontSize: 18, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' },
-    tableRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, borderBottomWidth: 1, borderColor: '#ccc' },
-    tableCell: { flex: 1, fontSize: 14, textAlign: 'center' },
+    tableRow: {
+        flexDirection: 'column',
+        padding: 10,
+        marginVertical: 5,
+        backgroundColor: '#f8f8f8',
+        borderRadius: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,  // For Android shadow
+    },
+    tableCell: {
+        fontSize: 16,
+        paddingVertical: 4,
+        color: '#333',
+    },
+    label: {
+        fontWeight: 'bold',
+        color: '#666',
+    },
+    buttonRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 10,
+        paddingHorizontal: 20,
+    },
 });
