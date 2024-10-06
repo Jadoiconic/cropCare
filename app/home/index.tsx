@@ -4,7 +4,7 @@ import Greeting from '@/components/Greeting';
 import { useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
-const Index = () => { // Renamed to uppercase
+const HomeScreen = () => { // Renamed to uppercase
     const router = useRouter();
     return (
         <ScrollView style={styles.container}>
@@ -72,7 +72,7 @@ const Index = () => { // Renamed to uppercase
     );
 }
 
-export default Index; // Updated to match the component name
+export default HomeScreen; // Updated to match the component name
 
 const styles = StyleSheet.create({
     container: {

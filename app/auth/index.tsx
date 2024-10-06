@@ -17,7 +17,7 @@ const SiginInScreen = () => {
     useEffect(() => {
         const unsbscribe = auth.onAuthStateChanged((user) => {
             if (user) {
-                // route.replace("/home");
+                route.navigate("/home");
             }
         });
         return unsbscribe
@@ -37,7 +37,7 @@ const SiginInScreen = () => {
             );
 
             if (user) {
-                alert("/home/Profile");
+                route.navigate("/home");
             }
         } catch (error) {
             alert("Invalid Email or Password!")

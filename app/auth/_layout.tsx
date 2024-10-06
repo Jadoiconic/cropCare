@@ -9,7 +9,8 @@ const RootStack = () => {
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
             <Stack screenOptions={{
-                headerShown: false
+                headerShown: false,
+                headerShadowVisible: false,
             }}>
                 <Stack.Screen name='index' />
                 <Stack.Screen name='resetPassword' />

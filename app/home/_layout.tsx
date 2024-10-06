@@ -30,15 +30,7 @@ const _layout = () => {
                     )
                 }}
             />
-            <Tabs.Screen
-                name='Discover'
-                options={{
-                    title: "Discover",
-                    tabBarIcon: ({ size, color }) => (
-                        <FontAwesome name="compass" size={size} color={color} />
-                    )
-                }}
-            />
+
             <Tabs.Screen
                 name='Forum'
                 options={{
@@ -64,6 +56,24 @@ const _layout = () => {
                     tabBarIcon: ({ size, color }) => (
                         <Ionicons name='person' size={size} color={color} />
                     )
+                }}
+            />
+            <Tabs.Screen
+                name="crop-management/PlantingSchedule"
+                options={{
+                    tabBarButton: () => null,
+                }}
+            />
+            <Tabs.Screen
+                name="crop-management/Fertilization"
+                options={{
+                    tabBarButton: () => null,
+                }}
+            />
+            <Tabs.Screen
+                name="crop-management/PestControl"
+                options={{
+                    tabBarButton: () => null,
                 }}
             />
         </Tabs>

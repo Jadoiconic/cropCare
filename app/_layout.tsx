@@ -6,8 +6,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import CustomDrawerContent from '@/components/CustomDrawerContent';
 import { useState, useEffect } from 'react';
 import { Stack, useRouter } from 'expo-router';
-import { FontAwesome5 } from '@expo/vector-icons';
-
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 export default function Layout() {
   const [user, setUser] = useState<Object | null>(null);  // Initially, user is null (not authenticated)
   const router = useRouter();  // To perform navigation
@@ -21,7 +20,7 @@ export default function Layout() {
         if (isAuthenticated) {
           setUser({ name: "User" });  // Set user if authenticated
         } else {
-          router.replace('/auth');  // Redirect to auth page if not authenticated
+          router.navigate('/auth');  // Redirect to auth page if not authenticated
         }
       }, 100);
     };
@@ -111,6 +110,13 @@ export default function Layout() {
             drawerLabel: 'Igenamiterere',
             headerTitle: 'Igenamiterere',
             drawerIcon: ({ size, color }) => (<Ionicons name="settings-sharp" size={size} color={color} />)
+          }}
+        />
+        <Drawer.Screen
+          name="auth"
+          options={{
+            drawerItemStyle: { display: 'none' },
+            headerShown: false,
           }}
         />
       </Drawer>
