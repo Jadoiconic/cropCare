@@ -19,23 +19,7 @@ const CropManagement: React.FC = () => {
 
     return (
         <View style={styles.container}>
-            <View style={styles.tabContainer}>
-                <TouchableOpacity
-                    style={[styles.tab, activeTab === 'Maize' ? styles.activeTab : styles.inactiveTab]}
-                    onPress={() => setActiveTab('Maize')}
-                >
-                    <Text style={[styles.tabText, activeTab === 'Maize' ? styles.activeTabText : styles.inactiveTabText]}>Maize</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.tab, activeTab === 'Irish Potatoes' ? styles.activeTab : styles.inactiveTab]}
-                    onPress={() => setActiveTab('Irish Potatoes')}
-                >
-                    <Text style={[styles.tabText, activeTab === 'Irish Potatoes' ? styles.activeTabText : styles.inactiveTabText]}>
-                        Irish Potatoes
-                    </Text>
-                </TouchableOpacity>
-            </View>
-
+            
             <ScrollView contentContainerStyle={styles.scrollContainer}>
                 {/* Card 1: Planting Schedule */}
                 <Animated.View style={[styles.card, { transform: [{ scale: scaleAnim1 }] }]}>
