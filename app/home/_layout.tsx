@@ -62,18 +62,21 @@ const _layout = () => {
                 name="crop-management/PlantingSchedule"
                 options={{
                     tabBarButton: () => null,
+                    title: "Planting Schedule"
                 }}
             />
             <Tabs.Screen
                 name="crop-management/Fertilization"
                 options={{
                     tabBarButton: () => null,
+                    title: "Fertilization"
                 }}
             />
             <Tabs.Screen
                 name="crop-management/PestControl"
                 options={{
                     tabBarButton: () => null,
+                    title: "Pest Control"
                 }}
             />
         </Tabs>
