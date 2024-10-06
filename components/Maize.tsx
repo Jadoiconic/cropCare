@@ -36,15 +36,15 @@ const Maize = () => {
             />
 
             {/* Main Title */}
-            <ScrollView>
-            <Text style={styles.title}>Ibigori</Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
+                <Text style={styles.title}>Ibigori</Text>
 
-            {/* Introductory Text */}
-            <Text style={styles.introduction}>
-                Uburyo Bwo Gufumbira Ibigori mu Rwanda Hagendewe ku Mabwiriza ya RAB
-            </Text>
+                {/* Introductory Text */}
+                <Text style={styles.introduction}>
+                    Uburyo Bwo Gufumbira Ibigori mu Rwanda Hagendewe ku Mabwiriza ya RAB
+                </Text>
 
-            {/* Filtered Sections */}
+                {/* Filtered Sections */}
                 {filteredSections.map((section) => (
                     <View key={section.id}>
                         <Text style={styles.sectionTitle}>{section.title}</Text>

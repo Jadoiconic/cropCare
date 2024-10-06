@@ -56,7 +56,7 @@ const Ibirayi = () => {
                 onChangeText={text => setSearchQuery(text)}
             />
 
-            <ScrollView>
+            <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Main Title */}
                 <Text style={styles.title}>Ibirayi</Text>
 

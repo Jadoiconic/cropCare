@@ -38,7 +38,7 @@ const Maize = () => {
     );
 
     return (
-        <ScrollView style={styles.container}>
+        <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
             <TextInput
                 style={styles.searchBar}
                 placeholder="Shakisha..."
