@@ -9,14 +9,6 @@ const Discover = () => {
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
 
-    const resources = [
-        {
-            title: 'Ikigo cy’Igihugu gishinzwe Iterambere ry’Ubuhinzi n’Ubworozi (RAB)',
-            link: 'https://www.rab.gov.rw',
-            description: 'Shyikira amakuru agezweho, ubushakashatsi, n’amabwiriza y’ubuhinzi harimo n\'uburyo bwo guhangana n’indwara n’ibyonnyi by’ibihingwa nk’ibirayi n’ibigori.',
-        },
-        // Add other resources here...
-    ];
 
     const handleChangePassword = async () => {
         if (newPassword !== confirmPassword) {
@@ -47,19 +39,6 @@ const Discover = () => {
     return (
         <View style={styles.container}>
             <ScrollView>
-                <Text style={styles.title}>Discover</Text>
-                <Text style={styles.subtitle}>
-                    Dore zimwe mu mbuga zafasha abahinzi mu Rwanda ushobora gushyira kuri Discover Screen ya Rwanda CropCare:
-                </Text>
-                {resources.map((resource, index) => (
-                    <View key={index} style={styles.resourceContainer}>
-                        <Text style={styles.resourceTitle}>{resource.title}</Text>
-                        <Text style={styles.resourceDescription}>{resource.description}</Text>
-                        <TouchableOpacity onPress={() => Linking.openURL(resource.link)} style={styles.button}>
-                            <Text style={styles.buttonText}>Sura Urubuga</Text>
-                        </TouchableOpacity>
-                    </View>
-                ))}
 
                 {/* Password Change Form */}
                 <View style={styles.passwordChangeContainer}>
