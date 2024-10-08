@@ -8,6 +8,7 @@ import { router } from 'expo-router';
 const Profile = () => {
     const [userData, setUserData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [displayName, setdisplayName] = useState('');
     const [newUserEmail, setNewUserEmail] = useState('');
     const [newUserPassword, setNewUserPassword] = useState('');
     const [newUserRole, setNewUserRole] = useState('user'); // Default role is 'user'
@@ -46,6 +47,7 @@ const Profile = () => {
 
             // Save the new user's details to Firestore (in 'Users' collection)
             await setDoc(doc(db, 'Users', newUser.uid), {
+                displayName,
                 email: newUserEmail,
                 role: newUserRole, // Store the selected role
                 userId: newUser.uid,
@@ -104,8 +106,8 @@ const Profile = () => {
                             <Text style={styles.adminHeader}>Create New User</Text>
                             <TextInput
                                 placeholder="Display Name"
-                                value={newUserEmail}
-                                onChangeText={setNewUserEmail}
+                                value={displayName}
+                                onChangeText={setdisplayName}
                                 style={styles.input}
                             />
                             <TextInput
