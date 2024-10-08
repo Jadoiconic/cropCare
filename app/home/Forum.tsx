@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, Button, ScrollView } from 'react-native';
 import { collection, addDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/services/config';
+import * as Notifications from 'expo-notifications';
+import * as Permissions from 'expo-permissions';
 
 const Forum = () => {
   const [messages, setMessages] = useState([]);
@@ -9,6 +11,18 @@ const Forum = () => {
 
   // Fetch current user
   const currentUser = auth.currentUser;
+
+  useEffect(() => {
+    // Request notification permissions when the app loads
+    const requestPermission = async () => {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== 'granted') {
+        alert('You need to enable notifications in the app settings.');
+      }
+    };
+
+    requestPermission();
+  }, []);
 
   useEffect(() => {
     // Query to get all chat messages, ordered by timestamp
@@ -21,11 +35,32 @@ const Forum = () => {
         id: doc.id,
         ...doc.data(),
       }));
+
+      // Check for new incoming messages and trigger a notification
+      if (fetchedMessages.length > messages.length) {
+        const latestMessage = fetchedMessages[fetchedMessages.length - 1];
+        if (latestMessage.userId !== currentUser?.uid) {
+          triggerNotification(latestMessage);
+        }
+      }
+
       setMessages(fetchedMessages);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [messages]);
+
+  // Function to trigger a local notification
+  const triggerNotification = (message) => {
+    Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'New Message',
+        body: `${message.userName}: ${message.text}`,
+        sound: true,
+      },
+      trigger: { seconds: 1 },
+    });
+  };
 
   // Function to send a new message
   const sendMessage = async () => {
@@ -34,7 +69,7 @@ const Forum = () => {
     const messageData = {
       text: newMessage,
       createdAt: new Date(),
-      userId: currentUser.uid,
+      userId: currentUser?.uid,
       userName: currentUser?.email, // Store the username or any relevant user data
     };
 
@@ -56,6 +91,7 @@ const Forum = () => {
               message.userId === currentUser.uid ? styles.outgoingMessage : styles.incomingMessage,
             ]}
           >
+            {message.userId !== currentUser.uid && <Text style={{ color: 'gray' }}>{message.userName}</Text>}
             <Text style={styles.messageText}>{message.text}</Text>
           </View>
         ))}
