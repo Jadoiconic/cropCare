@@ -1,19 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, Button, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TextInput, Button, ScrollView, TouchableOpacity } from 'react-native';
 import { collection, addDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/services/config';
 import * as Notifications from 'expo-notifications';
-import * as Permissions from 'expo-permissions';
 
 const Forum = () => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [replyTo, setReplyTo] = useState(null); // State to hold the message being replied to
 
-  // Fetch current user
   const currentUser = auth.currentUser;
 
   useEffect(() => {
-    // Request notification permissions when the app loads
     const requestPermission = async () => {
       const { status } = await Notifications.requestPermissionsAsync();
       if (status !== 'granted') {
@@ -25,18 +23,15 @@ const Forum = () => {
   }, []);
 
   useEffect(() => {
-    // Query to get all chat messages, ordered by timestamp
     const messagesRef = collection(db, 'chatrooms', 'general', 'messages');
     const q = query(messagesRef, orderBy('createdAt'));
 
-    // Real-time listener for new messages
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetchedMessages = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
       }));
 
-      // Check for new incoming messages and trigger a notification
       if (fetchedMessages.length > messages.length) {
         const latestMessage = fetchedMessages[fetchedMessages.length - 1];
         if (latestMessage.userId !== currentUser?.uid) {
@@ -50,7 +45,6 @@ const Forum = () => {
     return () => unsubscribe();
   }, [messages]);
 
-  // Function to trigger a local notification
   const triggerNotification = (message) => {
     Notifications.scheduleNotificationAsync({
       content: {
@@ -62,7 +56,6 @@ const Forum = () => {
     });
   };
 
-  // Function to send a new message
   const sendMessage = async () => {
     if (newMessage.trim() === '') return;
 
@@ -70,14 +63,19 @@ const Forum = () => {
       text: newMessage,
       createdAt: new Date(),
       userId: currentUser?.uid,
-      userName: currentUser?.email, // Store the username or any relevant user data
+      userName: currentUser?.email,
+      replyTo: replyTo ? { id: replyTo.id, text: replyTo.text, userName: replyTo.userName } : null, // Add reply information
     };
 
-    // Add message to Firestore
     const messagesRef = collection(db, 'chatrooms', 'general', 'messages');
     await addDoc(messagesRef, messageData);
 
-    setNewMessage(''); // Clear input after sending
+    setNewMessage('');
+    setReplyTo(null); // Clear reply state after sending the message
+  };
+
+  const handleReply = (message) => {
+    setReplyTo(message); // Set the selected message to reply to
   };
 
   return (
@@ -92,12 +90,28 @@ const Forum = () => {
             ]}
           >
             {message.userId !== currentUser.uid && <Text style={{ color: 'gray' }}>{message.userName}</Text>}
+            {message.replyTo && (
+              <View style={styles.replyContainer}>
+                <Text style={styles.replyText}>
+                  Reply to {message.replyTo.userName}: {message.replyTo.text}
+                </Text>
+              </View>
+            )}
             <Text style={styles.messageText}>{message.text}</Text>
+            <TouchableOpacity onPress={() => handleReply(message)}>
+              <Text style={styles.replyButton}>Reply</Text>
+            </TouchableOpacity>
           </View>
         ))}
       </ScrollView>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
 
+      {replyTo && (
+        <View style={styles.replyInfo}>
+          <Text>Replying to {replyTo.userName}: {replyTo.text}</Text>
+        </View>
+      )}
+
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <TextInput
           style={styles.input}
           placeholder="Type a message..."
@@ -128,11 +142,11 @@ const styles = StyleSheet.create({
     maxWidth: '70%',
   },
   outgoingMessage: {
-    backgroundColor: '#dcf8c6', // Light green for outgoing messages
+    backgroundColor: '#dcf8c6',
     alignSelf: 'flex-end',
   },
   incomingMessage: {
-    backgroundColor: '#f1f0f0', // Light grey for incoming messages
+    backgroundColor: '#f1f0f0',
     alignSelf: 'flex-start',
   },
   messageText: {
@@ -145,5 +159,24 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 10,
     marginBottom: 10,
+  },
+  replyButton: {
+    color: 'blue',
+    marginTop: 5,
+  },
+  replyContainer: {
+    backgroundColor: '#e0e0e0',
+    padding: 5,
+    borderRadius: 5,
+    marginBottom: 5,
+  },
+  replyText: {
+    fontStyle: 'italic',
+  },
+  replyInfo: {
+    padding: 5,
+    backgroundColor: '#e6e6e6',
+    marginBottom: 10,
+    borderRadius: 10,
   },
 });
