@@ -77,7 +77,7 @@ const SiginInScreen = () => {
                     </View>
                 </View>
                 <TouchableOpacity
-                    style={[styles.button, { backgroundColor: !email || !password.length || loading ? "#9C99ff" : "#6C63FF", }]}
+                    style={[styles.button, { backgroundColor: !email || !password.length || loading ? "green" : "#6C63FF", }]}
                     disabled={(!email || !password) && loading ? true : false}
                     onPress={handleLogin}
                 >
