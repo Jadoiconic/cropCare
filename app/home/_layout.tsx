@@ -1,6 +1,6 @@
 import { Text, TouchableOpacity } from 'react-native';
 import React, { useEffect, useState } from 'react';
-import { Tabs, useNavigation } from 'expo-router';
+import { router, Tabs, useNavigation } from 'expo-router';
 import { AntDesign, Entypo, FontAwesome, Ionicons } from '@expo/vector-icons';
 import { DrawerActions } from '@react-navigation/native';
 import { doc, getDoc } from 'firebase/firestore';
@@ -47,7 +47,7 @@ const _layout = () => {
                     </TouchableOpacity>
                 ),
                 headerRight: () => (
-                    <TouchableOpacity onPress={() => { }} style={{ paddingHorizontal: 10 }}>
+                    <TouchableOpacity onPress={() => router.navigate("/home/Chats")} style={{ paddingHorizontal: 10 }}>
                         <Ionicons name="person-circle-outline" size={30} color="white" />
                     </TouchableOpacity>
                 ),
@@ -117,6 +117,13 @@ const _layout = () => {
             />
             <Tabs.Screen
                 name="crop-management/PestControl"
+                options={{
+                    tabBarButton: () => null,
+                    title: "Pest Control"
+                }}
+            />
+            <Tabs.Screen
+                name="Chats"
                 options={{
                     tabBarButton: () => null,
                     title: "Pest Control"

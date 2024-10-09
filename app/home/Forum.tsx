@@ -1,182 +1,219 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, Button, ScrollView, TouchableOpacity } from 'react-native';
-import { collection, addDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Text, View, FlatList, TextInput, Button, TouchableOpacity } from 'react-native';
+import { collection, addDoc, getDocs, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/services/config';
-import * as Notifications from 'expo-notifications';
 
+// Helper function to get posts
+const getPosts = async () => {
+    const postsSnapshot = await getDocs(collection(db, 'Posts'));
+    let posts = [];
+    postsSnapshot.forEach((doc) => {
+        posts.push({ id: doc.id, ...doc.data() });
+    });
+    return posts;
+};
+
+// Helper function to get replies for a post
+const getReplies = async (postId) => {
+    const repliesSnapshot = await getDocs(collection(db, `Posts/${postId}/replies`));
+    let replies = [];
+    repliesSnapshot.forEach((doc) => {
+        replies.push({ id: doc.id, ...doc.data() });
+    });
+    return replies;
+};
+
+// Helper function to create a new post
+const createPost = async (content) => {
+    const userId = auth.currentUser?.uid;  // Get the current user's ID
+    const userName = auth.currentUser?.email;  // Get the current user's ID
+    await addDoc(collection(db, 'Posts'), {
+        content,
+        userId,
+        userName, // Store the userId
+        createdAt: serverTimestamp(),
+    });
+};
+
+// Helper function to create a new reply
+const createReply = async (postId, replyText) => {
+    await addDoc(collection(db, `Posts/${postId}/replies`), {
+        replyText,
+        createdAt: serverTimestamp(),
+    });
+};
+
+// Helper function to get the post owner's name
+const getPostOwnerName = async (userId) => {
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    if (userDoc.exists()) {
+        return userDoc.data().name;  // Assuming the user's name is stored in the "name" field
+    }
+    return 'Unknown';  // Fallback in case the user doesn't exist
+};
+
+// Forum Component
 const Forum = () => {
-  const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [replyTo, setReplyTo] = useState(null); // State to hold the message being replied to
+    const [posts, setPosts] = useState([]);
+    const [newPostContent, setNewPostContent] = useState('');
 
-  const currentUser = auth.currentUser;
+    useEffect(() => {
+        // Fetch posts from Firestore on component mount
+        const fetchPosts = async () => {
+            const fetchedPosts = await getPosts();
+            setPosts(fetchedPosts);
+        };
+        fetchPosts();
+    }, []);
 
-  useEffect(() => {
-    const requestPermission = async () => {
-      const { status } = await Notifications.requestPermissionsAsync();
-      if (status !== 'granted') {
-        alert('You need to enable notifications in the app settings.');
-      }
-    };
-
-    requestPermission();
-  }, []);
-
-  useEffect(() => {
-    const messagesRef = collection(db, 'chatrooms', 'general', 'messages');
-    const q = query(messagesRef, orderBy('createdAt'));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedMessages = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-
-      if (fetchedMessages.length > messages.length) {
-        const latestMessage = fetchedMessages[fetchedMessages.length - 1];
-        if (latestMessage.userId !== currentUser?.uid) {
-          triggerNotification(latestMessage);
+    // Handle creating a new post
+    const handleCreatePost = async () => {
+        if (newPostContent) {
+            await createPost(newPostContent);
+            setNewPostContent('');  // Clear input after submission
+            const fetchedPosts = await getPosts();  // Refresh posts
+            setPosts(fetchedPosts);
         }
-      }
-
-      setMessages(fetchedMessages);
-    });
-
-    return () => unsubscribe();
-  }, [messages]);
-
-  const triggerNotification = (message) => {
-    Notifications.scheduleNotificationAsync({
-      content: {
-        title: 'New Message',
-        body: `${message.userName}: ${message.text}`,
-        sound: true,
-      },
-      trigger: { seconds: 1 },
-    });
-  };
-
-  const sendMessage = async () => {
-    if (newMessage.trim() === '') return;
-
-    const messageData = {
-      text: newMessage,
-      createdAt: new Date(),
-      userId: currentUser?.uid,
-      userName: currentUser?.email,
-      replyTo: replyTo ? { id: replyTo.id, text: replyTo.text, userName: replyTo.userName } : null, // Add reply information
     };
 
-    const messagesRef = collection(db, 'chatrooms', 'general', 'messages');
-    await addDoc(messagesRef, messageData);
+    return (
+        <View style={styles.container}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                <TextInput
+                    style={styles.input}
+                    placeholder="Write a post..."
+                    value={newPostContent}
+                    onChangeText={setNewPostContent}
+                />
+                <Button title="Post" onPress={handleCreatePost} />
+            </View>
 
-    setNewMessage('');
-    setReplyTo(null); // Clear reply state after sending the message
-  };
-
-  const handleReply = (message) => {
-    setReplyTo(message); // Set the selected message to reply to
-  };
-
-  return (
-    <View style={styles.container}>
-      <ScrollView style={styles.messagesContainer}>
-        {messages.map((message) => (
-          <View
-            key={message.id}
-            style={[
-              styles.messageBubble,
-              message.userId === currentUser.uid ? styles.outgoingMessage : styles.incomingMessage,
-            ]}
-          >
-            {message.userId !== currentUser.uid && <Text style={{ color: 'gray' }}>{message.userName}</Text>}
-            {message.replyTo && (
-              <View style={styles.replyContainer}>
-                <Text style={styles.replyText}>
-                  Reply to {message.replyTo.userName}: {message.replyTo.text}
-                </Text>
-              </View>
-            )}
-            <Text style={styles.messageText}>{message.text}</Text>
-            <TouchableOpacity onPress={() => handleReply(message)}>
-              <Text style={styles.replyButton}>Reply</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
-      </ScrollView>
-
-      {replyTo && (
-        <View style={styles.replyInfo}>
-          <Text>Replying to {replyTo.userName}: {replyTo.text}</Text>
+            <FlatList
+                data={posts}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => <Post post={item} />}
+            />
         </View>
-      )}
+    );
+};
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <TextInput
-          style={styles.input}
-          placeholder="Type a message..."
-          value={newMessage}
-          onChangeText={setNewMessage}
-        />
-        <Button title="Send" onPress={sendMessage} />
-      </View>
-    </View>
-  );
+// Post Component
+const Post = ({ post }) => {
+    const [repliesVisible, setRepliesVisible] = useState(false);
+    const [replies, setReplies] = useState([]);
+    const [newReplyText, setNewReplyText] = useState('');
+    const [postOwnerName, setPostOwnerName] = useState('');
+    const [replyInputVisible, setReplyInputVisible] = useState(false); // Track if reply input is visible
+
+    useEffect(() => {
+        const fetchPostOwner = async () => {
+            const currentUserId = auth.currentUser?.uid;
+            if (post.userId === currentUserId) {
+                setPostOwnerName('you');
+            } else {
+                const ownerName = await getPostOwnerName(post.userId);
+                setPostOwnerName(ownerName);
+            }
+        };
+
+        fetchPostOwner();
+    }, [post.userId]);
+
+    const toggleReplies = async () => {
+        if (!repliesVisible) {
+            const fetchedReplies = await getReplies(post.id);
+            setReplies(fetchedReplies);
+        }
+        setRepliesVisible(!repliesVisible);
+    };
+
+    const handleCreateReply = async () => {
+        if (newReplyText) {
+            await createReply(post.id, newReplyText);
+            setNewReplyText('');
+            const fetchedReplies = await getReplies(post.id);
+            setReplies(fetchedReplies);
+        }
+    };
+
+    const toggleReplyInput = () => {
+        setReplyInputVisible(!replyInputVisible);
+    };
+
+    return (
+        <View style={styles.post}>
+            <Text style={styles.postText}>{post.content}</Text>
+            <Text>Posted by: {postOwnerName}</Text>
+
+            {!replyInputVisible && (
+                <TouchableOpacity onPress={toggleReplyInput}>
+                    <Text style={styles.replyText}>Reply</Text>
+                </TouchableOpacity>
+            )}
+
+            {replyInputVisible && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Write a reply..."
+                        value={newReplyText}
+                        onChangeText={setNewReplyText}
+                    />
+                    <TouchableOpacity onPress={handleCreateReply}>
+                        <Text>Reply</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
+
+            <TouchableOpacity onPress={toggleReplies}>
+                <Text style={styles.replyText}>
+                    {replies.length} {replies.length === 1 ? 'Reply' : 'Replies'}
+                </Text>
+            </TouchableOpacity>
+
+            {repliesVisible && (
+                <View style={styles.repliesContainer}>
+                    {replies.map((reply) => (
+                        <Text key={reply.id} style={styles.replyText}>- {reply.replyText}</Text>
+                    ))}
+                </View>
+            )}
+        </View>
+    );
 };
 
 export default Forum;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 10,
-  },
-  messagesContainer: {
-    flex: 1,
-    marginBottom: 10,
-  },
-  messageBubble: {
-    padding: 10,
-    marginVertical: 5,
-    borderRadius: 10,
-    maxWidth: '70%',
-  },
-  outgoingMessage: {
-    backgroundColor: '#dcf8c6',
-    alignSelf: 'flex-end',
-  },
-  incomingMessage: {
-    backgroundColor: '#f1f0f0',
-    alignSelf: 'flex-start',
-  },
-  messageText: {
-    fontSize: 16,
-  },
-  input: {
-    borderWidth: 1,
-    width: '80%',
-    borderColor: '#ccc',
-    borderRadius: 20,
-    padding: 10,
-    marginBottom: 10,
-  },
-  replyButton: {
-    color: 'blue',
-    marginTop: 5,
-  },
-  replyContainer: {
-    backgroundColor: '#e0e0e0',
-    padding: 5,
-    borderRadius: 5,
-    marginBottom: 5,
-  },
-  replyText: {
-    fontStyle: 'italic',
-  },
-  replyInfo: {
-    padding: 5,
-    backgroundColor: '#e6e6e6',
-    marginBottom: 10,
-    borderRadius: 10,
-  },
+    container: {
+        padding: 20,
+        backgroundColor: '#fff',
+        flex: 1,
+    },
+    input: {
+        height: 40,
+        width: '80%',
+        borderColor: '#ccc',
+        borderWidth: 1,
+        paddingHorizontal: 10,
+        marginBottom: 10,
+        borderRadius: 5,
+    },
+    post: {
+        padding: 10,
+        marginBottom: 20,
+        backgroundColor: '#f8f8f8',
+        borderRadius: 5,
+    },
+    postText: {
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    repliesContainer: {
+        paddingLeft: 20,
+    },
+    replyText: {
+        fontSize: 14,
+        color: '#666',
+    },
 });
