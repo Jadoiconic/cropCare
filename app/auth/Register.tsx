@@ -6,66 +6,40 @@ import {
     ActivityIndicator,
 } from "react-native";
 import { TextInput } from "react-native-gesture-handler";
-import { useEffect, useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth, db } from "@/services/config"; // Import Firebase configuration
+import { useState } from "react";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth, db } from "@/services/config"; // Adjusted import statement for Firebase
+import { doc, setDoc } from "firebase/firestore"; // Import Firestore methods
 import { useRouter } from "expo-router";
-import { doc, getDoc } from "firebase/firestore"; // Import Firestore methods
 
-const SignInScreen = () => {
+const RegisterScreen = () => {
     const router = useRouter();
     const [email, setEmail] = useState(""); // State for email
     const [password, setPassword] = useState(""); // State for password
+    const [newUserName, setNewUserName] = useState(""); // State for first name
     const [loading, setLoading] = useState(false); // State for loading indicator
+    const [role] = useState("Farmer"); // Default role
 
-    // Effect to check if user is already authenticated
-    useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged((user) => {
-            if (user) {
-                handleRoleRedirect(user.uid);
-            }
-        });
-        return () => unsubscribe(); // Cleanup subscription
-    }, [router]);
-
-    // Function to redirect user based on role
-    const handleRoleRedirect = async (uid: string) => {
-        const docRef = doc(db, "farmers", uid); // Reference to user's Firestore document
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-            const userData = docSnap.data();
-            const role = userData.role; // Get the role from the document
-
-            // Navigate based on user role
-            switch (role) {
-                case "Admin":
-                    router.navigate("/home/admin/"); // Admin dashboard
-                    break;
-                case "Expert":
-                    router.navigate("/home/expert/"); // Expert dashboard
-                    break;
-                case "Farmer":
-                    router.navigate("/home/"); // Farmer dashboard
-                    break;
-                default:
-                    alert("Role not recognized!"); // Handle unrecognized roles
-            }
-        } else {
-            alert("User does not exist in the database!");
-        }
-    };
-
-    // Function to handle login
-    const handleLogin = async () => {
+    const handleRegister = async () => {
         setLoading(true);
         try {
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            if (userCredential) {
-                handleRoleRedirect(userCredential.user.uid); // Check role after login
-            }
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+
+            // After successful registration, store user data in Firestore
+            await setDoc(doc(db, "farmers", user.uid), {
+                email: user.email,
+                name: newUserName,
+                role: role,
+                createdAt: new Date().toISOString(), // Optional: Add timestamp
+                // Add other fields as necessary
+            });
+
+            // Navigate to login or another screen after successful registration
+            alert("Registration Successful!");
+            router.push("/auth/"); // Change this to your login screen route
         } catch (error) {
-            alert("Invalid Email or Password!"); // Display error message
+            alert("Registration failed! " + error.message); // Display error message
         } finally {
             setLoading(false); // Reset loading state
         }
@@ -73,8 +47,18 @@ const SignInScreen = () => {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Welcome to Crop Care</Text>
+            <Text style={styles.title}>Register</Text>
             <View style={{ width: "100%", padding: 40 }}>
+                <View style={styles.inputContainer}>
+                    <Text style={styles.label}>First Name</Text>
+                    <TextInput
+                        placeholder="John"
+                        value={newUserName}
+                        onChangeText={setNewUserName} // Corrected to update state
+                        style={styles.input}
+                    />
+                </View>
+                
                 <View style={styles.inputContainer}>
                     <Text style={styles.label}>Email</Text>
                     <TextInput
@@ -85,6 +69,7 @@ const SignInScreen = () => {
                         style={styles.input}
                     />
                 </View>
+
                 <View style={styles.inputContainer}>
                     <Text style={styles.label}>Password</Text>
                     <TextInput
@@ -99,31 +84,20 @@ const SignInScreen = () => {
                 <TouchableOpacity
                     style={[styles.button, { backgroundColor: loading ? "gray" : "#6C63FF" }]}
                     disabled={loading}
-                    onPress={handleLogin}
+                    onPress={handleRegister}
                 >
                     <View>
                         {loading ? (
                             <ActivityIndicator size={30} color="#fff" />
                         ) : (
-                            <Text style={styles.buttonText}>Sign In</Text>
+                            <Text style={styles.buttonText}>Register</Text>
                         )}
                     </View>
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                    style={{ marginTop: 10 }}
-                    onPress={() => {
-                        // Handle forgot password action here
-                    }}
-                >
-                    <Text style={[styles.buttonText, { color: "green", textAlign: "right" }]}>
-                        Forgot Password?
-                    </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity onPress={() => router.push("/auth/Register")}>
+                <TouchableOpacity onPress={() => router.push("/auth/")}>
                     <Text style={{ color: "blue", textAlign: "center" }}>
-                        Don't have an account? Register here
+                        Already have an account? Sign In
                     </Text>
                 </TouchableOpacity>
             </View>
@@ -173,4 +147,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default SignInScreen;
+export default RegisterScreen;

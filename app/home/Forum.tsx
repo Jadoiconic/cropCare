@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, FlatList, TextInput, Button, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, FlatList, TextInput, TouchableOpacity, Button } from 'react-native';
 import { collection, addDoc, getDocs, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/services/config';
 
@@ -23,33 +23,37 @@ const getReplies = async (postId) => {
     return replies;
 };
 
+// Helper function to get the user's name
+const getUserName = async (userId) => {
+    const userDoc = await getDoc(doc(db, 'users', userId)); // Assuming 'users' is the collection name
+    if (userDoc.exists()) {
+        return userDoc.data().name; // Fetch the user's name from the Firestore document
+    }
+    return 'Unknown'; // Default name if not found
+};
+
 // Helper function to create a new post
 const createPost = async (content) => {
-    const userId = auth.currentUser?.uid;  // Get the current user's ID
-    const userName = auth.currentUser?.email;  // Get the current user's ID
+    const userId = auth.currentUser?.uid;  
+    const userName = await getUserName(userId);  // Fetching user name
     await addDoc(collection(db, 'Posts'), {
         content,
         userId,
-        userName, // Store the userId
+        userName, 
         createdAt: serverTimestamp(),
     });
 };
 
 // Helper function to create a new reply
 const createReply = async (postId, replyText) => {
+    const userId = auth.currentUser?.uid;  
+    const userName = await getUserName(userId);  // Fetching user name
     await addDoc(collection(db, `Posts/${postId}/replies`), {
         replyText,
+        userId,
+        userName,
         createdAt: serverTimestamp(),
     });
-};
-
-// Helper function to get the post owner's name
-const getPostOwnerName = async (userId) => {
-    const userDoc = await getDoc(doc(db, 'users', userId));
-    if (userDoc.exists()) {
-        return userDoc.data().name;  // Assuming the user's name is stored in the "name" field
-    }
-    return 'Unknown';  // Fallback in case the user doesn't exist
 };
 
 // Forum Component
@@ -58,27 +62,33 @@ const Forum = () => {
     const [newPostContent, setNewPostContent] = useState('');
 
     useEffect(() => {
-        // Fetch posts from Firestore on component mount
         const fetchPosts = async () => {
-            const fetchedPosts = await getPosts();
-            setPosts(fetchedPosts);
+            try {
+                const fetchedPosts = await getPosts();
+                setPosts(fetchedPosts);
+            } catch (error) {
+                console.error("Error fetching posts:", error);
+            }
         };
         fetchPosts();
     }, []);
 
-    // Handle creating a new post
     const handleCreatePost = async () => {
-        if (newPostContent) {
-            await createPost(newPostContent);
-            setNewPostContent('');  // Clear input after submission
-            const fetchedPosts = await getPosts();  // Refresh posts
-            setPosts(fetchedPosts);
+        if (newPostContent.trim()) {
+            try {
+                await createPost(newPostContent);
+                setNewPostContent('');  
+                const fetchedPosts = await getPosts();  
+                setPosts(fetchedPosts);
+            } catch (error) {
+                console.error("Error creating post:", error);
+            }
         }
     };
 
     return (
         <View style={styles.container}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+            <View style={styles.inputContainer}>
                 <TextInput
                     style={styles.input}
                     placeholder="Write a post..."
@@ -93,6 +103,10 @@ const Forum = () => {
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => <Post post={item} />}
             />
+
+            <TouchableOpacity style={styles.chatButton}>
+                <Text style={styles.chatButtonText}>Chat with Experts</Text>
+            </TouchableOpacity>
         </View>
     );
 };
@@ -102,57 +116,48 @@ const Post = ({ post }) => {
     const [repliesVisible, setRepliesVisible] = useState(false);
     const [replies, setReplies] = useState([]);
     const [newReplyText, setNewReplyText] = useState('');
-    const [postOwnerName, setPostOwnerName] = useState('');
-    const [replyInputVisible, setReplyInputVisible] = useState(false); // Track if reply input is visible
+    const [replyInputVisible, setReplyInputVisible] = useState(false); 
 
     useEffect(() => {
-        const fetchPostOwner = async () => {
-            const currentUserId = auth.currentUser?.uid;
-            if (post.userId === currentUserId) {
-                setPostOwnerName('you');
-            } else {
-                const ownerName = await getPostOwnerName(post.userId);
-                setPostOwnerName(ownerName);
+        const fetchReplies = async () => {
+            if (repliesVisible) {
+                const fetchedReplies = await getReplies(post.id);
+                setReplies(fetchedReplies);
             }
         };
 
-        fetchPostOwner();
-    }, [post.userId]);
+        fetchReplies();
+    }, [repliesVisible, post.id]);
 
-    const toggleReplies = async () => {
-        if (!repliesVisible) {
-            const fetchedReplies = await getReplies(post.id);
-            setReplies(fetchedReplies);
-        }
+    const toggleReplies = () => {
         setRepliesVisible(!repliesVisible);
     };
 
     const handleCreateReply = async () => {
-        if (newReplyText) {
-            await createReply(post.id, newReplyText);
-            setNewReplyText('');
-            const fetchedReplies = await getReplies(post.id);
-            setReplies(fetchedReplies);
+        if (newReplyText.trim()) {
+            try {
+                await createReply(post.id, newReplyText);
+                setNewReplyText('');
+                setRepliesVisible(true); // Automatically show replies after creating one
+            } catch (error) {
+                console.error("Error creating reply:", error);
+            }
         }
-    };
-
-    const toggleReplyInput = () => {
-        setReplyInputVisible(!replyInputVisible);
     };
 
     return (
         <View style={styles.post}>
             <Text style={styles.postText}>{post.content}</Text>
-            <Text>Posted by: {postOwnerName}</Text>
+            <Text style={styles.postOwnerText}>Posted by: {post.userName}</Text>
 
             {!replyInputVisible && (
-                <TouchableOpacity onPress={toggleReplyInput}>
+                <TouchableOpacity onPress={() => setReplyInputVisible(true)}>
                     <Text style={styles.replyText}>Reply</Text>
                 </TouchableOpacity>
             )}
 
             {replyInputVisible && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                <View style={styles.replyInputContainer}>
                     <TextInput
                         style={styles.input}
                         placeholder="Write a reply..."
@@ -160,7 +165,7 @@ const Post = ({ post }) => {
                         onChangeText={setNewReplyText}
                     />
                     <TouchableOpacity onPress={handleCreateReply}>
-                        <Text>Reply</Text>
+                        <Text style={styles.replyButton}>Reply</Text>
                     </TouchableOpacity>
                 </View>
             )}
@@ -174,7 +179,9 @@ const Post = ({ post }) => {
             {repliesVisible && (
                 <View style={styles.repliesContainer}>
                     {replies.map((reply) => (
-                        <Text key={reply.id} style={styles.replyText}>- {reply.replyText}</Text>
+                        <Text key={reply.id} style={styles.replyText}>
+                            - {reply.replyText} (by {reply.userName}) {/* Displaying userName instead of email */}
+                        </Text>
                     ))}
                 </View>
             )}
@@ -184,36 +191,89 @@ const Post = ({ post }) => {
 
 export default Forum;
 
+// Updated Styles
 const styles = StyleSheet.create({
     container: {
         padding: 20,
-        backgroundColor: '#fff',
+        backgroundColor: '#f0f4f8', // Light background for a pleasant look
         flex: 1,
+    },
+    inputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+        backgroundColor: '#ffffff', // White background for input area
+        borderRadius: 10,
+        padding: 10,
+        shadowColor: '#000', // Adding shadow for elevation
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.2,
+        shadowRadius: 1,
+        elevation: 5, // For Android shadow
     },
     input: {
         height: 40,
-        width: '80%',
+        width: '75%', // Adjusted width for better input space
         borderColor: '#ccc',
         borderWidth: 1,
+        borderRadius: 10, // Rounded input corners
         paddingHorizontal: 10,
-        marginBottom: 10,
-        borderRadius: 5,
+        backgroundColor: '#fafafa', // Light grey for input background
     },
     post: {
-        padding: 10,
-        marginBottom: 20,
-        backgroundColor: '#f8f8f8',
-        borderRadius: 5,
+        backgroundColor: '#ffffff', // White background for posts
+        padding: 15,
+        marginVertical: 10,
+        borderRadius: 10,
+        shadowColor: '#000', // Adding shadow for elevation
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
+        elevation: 5, // For Android shadow
     },
     postText: {
         fontSize: 16,
-        fontWeight: 'bold',
+        color: '#333', // Dark text for better readability
+    },
+    postOwnerText: {
+        fontSize: 12,
+        color: '#888', // Lighter text color for owner name
+        marginBottom: 10,
+    },
+    replyText: {
+        color: '#007BFF',
+        marginVertical: 5,
+        fontWeight: 'bold', // Bold text for replies
     },
     repliesContainer: {
         paddingLeft: 20,
+        marginTop: 5,
     },
-    replyText: {
-        fontSize: 14,
-        color: '#666',
+    chatButton: {
+        backgroundColor: '#007BFF',
+        padding: 12,
+        borderRadius: 10,
+        marginTop: 10,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
+        elevation: 5, // For Android shadow
+    },
+    chatButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold', // Bold text for the chat button
+    },
+    replyInputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: 10,
+    },
+    replyButton: {
+        color: '#007BFF',
+        marginLeft: 10,
+        fontWeight: 'bold', // Bold text for reply button
     },
 });

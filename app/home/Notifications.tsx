@@ -1,27 +1,20 @@
 // Notification.tsx
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Button, Alert, TouchableOpacity, TextInput, FlatList, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Alert, FlatList, ScrollView } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { auth, db } from '@/services/config';
-import { collection, addDoc } from 'firebase/firestore';
+import { auth } from '@/services/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useRouter } from 'expo-router';
 
 const Notification: React.FC = () => {
-    const [plantingDate, setPlantingDate] = useState<Date | null>(null);
     const [userId, setUserId] = useState<string | null>(null);
-    const [cropType, setCropType] = useState<'Ibigori' | 'Ibirayi' | null>(null);
-    const [showDatePicker, setShowDatePicker] = useState(false);
-    const [performedActions, setPerformedActions] = useState<string>('');
-    const [farmName, setFarmName] = useState<string>('');
     const [scheduleList, setScheduleList] = useState<any[]>([]);
 
     const router = useRouter();
 
+    // Request notification permissions and load local schedule on component mount
     useEffect(() => {
         const requestPermissions = async () => {
             const { status } = await Notifications.getPermissionsAsync();
@@ -30,23 +23,23 @@ const Notification: React.FC = () => {
             }
         };
         requestPermissions();
-
         loadLocalSchedule();
     }, []);
 
+    // Check authentication state
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             if (user) {
                 setUserId(user.uid);
             } else {
                 setUserId(null);
-                router.replace('/auth');
+                router.replace('/auth'); // Redirect to authentication if user is not logged in
             }
         });
-
         return () => unsubscribe();
     }, []);
 
+    // Load local planting schedule from AsyncStorage
     const loadLocalSchedule = async () => {
         try {
             const localSchedule = await AsyncStorage.getItem('localPlantingSchedule');
@@ -58,34 +51,26 @@ const Notification: React.FC = () => {
                         plantingDate: new Date(item.plantingDate),
                         actionPerformedDate: new Date(item.actionPerformedDate),
                     }));
-
-                    formattedSchedules.sort((a, b) => b.plantingDate - a.plantingDate);
+                    // Sort schedules by planting date
+                    formattedSchedules.sort((a, b) => b.plantingDate.getTime() - a.plantingDate.getTime());
                     setScheduleList(formattedSchedules);
                 }
             }
         } catch (error) {
             console.error('Failed to load local schedule:', error);
+            Alert.alert('Error', 'Failed to load planting schedules.');
         }
     };
 
-    const formatDate = (date: any) => {
-        if (!date) return 'N/A';
-
-        if (typeof date === 'string') {
-            return date;
-        } else if (date && typeof date === 'object' && 'seconds' in date && 'nanoseconds' in date) {
-            return new Date(date.seconds * 1000).toDateString();
-        } else if (date instanceof Date) {
-            return date.toDateString();
-        } else {
-            return new Date(date).toDateString();
-        }
+    // Format date to a readable string
+    const formatDate = (date: Date | null) => {
+        return date ? date.toDateString() : 'N/A';
     };
 
-    const calculateRemainingDays = (targetDate) => {
+    // Calculate remaining days until a specific date
+    const calculateRemainingDays = (targetDate: Date) => {
         const today = new Date();
-        const target = new Date(targetDate);
-        const timeDifference = target - today;
+        const timeDifference = targetDate.getTime() - today.getTime();
         const remainingDays = Math.ceil(timeDifference / (1000 * 60 * 60 * 24));
         return remainingDays >= 0 ? remainingDays : 'Expired';
     };
@@ -93,14 +78,13 @@ const Notification: React.FC = () => {
     return (
         <ScrollView style={styles.container}>
             <Text style={styles.title}>Remaining Schedules</Text>
-
-            {/* Display Table of Planting Schedules */}
+            {/* Display planting schedules */}
             {scheduleList.length > 0 && (
                 <View style={styles.tableContainer}>
                     <FlatList
-                        data={scheduleList.filter(item => calculateRemainingDays(item.plantingDate) <= 2)}
+                        data={scheduleList.filter(item => calculateRemainingDays(item.plantingDate) <= 2)} // Only show schedules for the next 2 days
                         keyExtractor={(item, index) => index.toString()}
-                        renderItem={({ item, index }) => (
+                        renderItem={({ item }) => (
                             <View style={styles.tableRow}>
                                 <Text style={styles.tableCell}>
                                     <Text style={styles.label}>Crop: </Text>
@@ -135,7 +119,6 @@ const Notification: React.FC = () => {
                             </View>
                         )}
                     />
-
                 </View>
             )}
         </ScrollView>
@@ -144,6 +127,7 @@ const Notification: React.FC = () => {
 
 export default Notification;
 
+// Styles for the component
 const styles = StyleSheet.create({
     container: { flex: 1, padding: 20, backgroundColor: '#E5F4E3' },
     title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
