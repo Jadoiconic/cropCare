@@ -5,14 +5,14 @@ import {
     TouchableOpacity,
     ActivityIndicator,
     FlatList,
-    ScrollView, // Import ScrollView
+    ScrollView,
 } from "react-native";
 import { TextInput } from "react-native-gesture-handler";
 import { useEffect, useState } from "react";
-import { auth, db } from "@/services/config"; // Adjusted import statement for Firebase
-import { doc, getDoc, setDoc, collection, query, getDocs } from "firebase/firestore"; // Import Firestore methods
-import { useRouter } from "expo-router";
-import { createUserWithEmailAndPassword } from "firebase/auth"; // Import createUserWithEmailAndPassword for registering new users
+import { auth, db } from "@/services/config"; 
+import { doc, getDoc, setDoc, collection, query, getDocs } from "firebase/firestore"; 
+import { useRouter } from "expo-router"; 
+import { createUserWithEmailAndPassword } from "firebase/auth"; 
 
 const UserManagementScreen = () => {
     const router = useRouter();
@@ -21,8 +21,8 @@ const UserManagementScreen = () => {
     const [users, setUsers] = useState<any[]>([]);
     const [newUserEmail, setNewUserEmail] = useState("");
     const [newUserPassword, setNewUserPassword] = useState("");
-    const [newUserName, setNewUserName] = useState(""); // New field for user's name
-    const [role, setRole] = useState("Expert"); // Default role for new user
+    const [newUserName, setNewUserName] = useState(""); 
+    const [role] = useState("Expert"); 
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -36,6 +36,9 @@ const UserManagementScreen = () => {
                         fetchAllUsers();
                     }
                 }
+            } else {
+                alert("Please log in to access this page.");
+                router.replace('/auth'); // Redirect to auth if not logged in
             }
             setLoading(false);
         };
@@ -44,46 +47,55 @@ const UserManagementScreen = () => {
     }, []);
 
     const fetchAllUsers = async () => {
-        const usersCollection = collection(db, "farmers");
-        const q = query(usersCollection);
-        const querySnapshot = await getDocs(q);
-        const usersList: any[] = [];
-        querySnapshot.forEach((doc) => {
-            usersList.push({ id: doc.id, ...doc.data() });
-        });
-        setUsers(usersList);
+        try {
+            const usersCollection = collection(db, "farmers");
+            const q = query(usersCollection);
+            const querySnapshot = await getDocs(q);
+            const usersList: any[] = [];
+            querySnapshot.forEach((doc) => {
+                usersList.push({ id: doc.id, ...doc.data() });
+            });
+            setUsers(usersList);
+        } catch (error) {
+            console.error("Error fetching users:", error);
+        }
     };
 
     const handleUpdatePassword = async (newPassword: string) => {
         const user = auth.currentUser;
         if (user) {
-            await user.updatePassword(newPassword);
-            alert("Password updated successfully!");
+            try {
+                await user.updatePassword(newPassword);
+                alert("Password updated successfully!");
+            } catch (error) {
+                alert("Password update failed! " + error.message);
+            }
         }
     };
 
     const handleRegisterUser = async () => {
-        // Register a new user with the Expert role
         if (newUserEmail && newUserPassword && newUserName) {
             try {
                 const userCredential = await createUserWithEmailAndPassword(auth, newUserEmail, newUserPassword);
                 const user = userCredential.user;
 
-                // Store new user data in Firestore
                 await setDoc(doc(db, "farmers", user.uid), {
-                    name: newUserName, // Save the user's name
+                    name: newUserName, 
                     email: user.email,
                     role: role,
                     createdAt: new Date().toISOString(),
                 });
 
                 alert("User registered successfully!");
+                // Reset form fields
                 setNewUserEmail("");
                 setNewUserPassword("");
                 setNewUserName("");
             } catch (error) {
                 alert("Registration failed! " + error.message);
             }
+        } else {
+            alert("Please fill all fields!");
         }
     };
 
@@ -147,15 +159,19 @@ const UserManagementScreen = () => {
                     )}
 
                     <Text style={styles.title}>User List</Text>
-                    <FlatList
-                        data={users}
-                        renderItem={({ item }) => (
-                            <View style={styles.userItem}>
-                                <Text>{item.name} - {item.email} - {item.role}</Text>
-                            </View>
-                        )}
-                        keyExtractor={(item) => item.id}
-                    />
+                    {users.length > 0 ? (
+                        <FlatList
+                            data={users}
+                            renderItem={({ item }) => (
+                                <View style={styles.userItem}>
+                                    <Text>{item.name} - {item.email} - {item.role}</Text>
+                                </View>
+                            )}
+                            keyExtractor={(item) => item.id}
+                        />
+                    ) : (
+                        <Text>No users found.</Text>
+                    )}
                 </View>
             )}
         </ScrollView>
