@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
+import { getStorage } from "firebase/storage"; // Importing Firebase Storage
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Firebase Configuration
@@ -19,6 +20,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 auth.useDeviceLanguage(); // Ensure that the auth messages are shown in the device's language
 const db = getFirestore(app);
+const storage = getStorage(app); // Initialize Firebase Storage
 
 // Enable offline persistence
 enableIndexedDbPersistence(db)
@@ -50,4 +52,5 @@ onAuthStateChanged(auth, (user) => {
     persistAuthState(user);
 });
 
-export { db, app, auth, persistAuthState };
+// Export Firebase services
+export { db, app, auth, storage, persistAuthState };

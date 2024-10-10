@@ -87,6 +87,7 @@ const Notification: React.FC = () => {
                         renderItem={({ item }) => (
                             <View style={styles.tableRow}>
                                 <Text style={styles.tableCell}>
+                                    
                                     <Text style={styles.label}>Crop: </Text>
                                     {item.cropName || 'N/A'}
                                 </Text>
