@@ -31,9 +31,9 @@ const CropManagement: React.FC = () => {
                         >
                             <Ionicons name="calendar" size={30} color="#fff" style={styles.icon} />
                             <View style={styles.cardContent}>
-                                <Text style={styles.cardTitle}>Planting Schedule</Text>
+                                <Text style={styles.cardTitle}>Iteganya Migambi Kugihingwa</Text>
                                 <Text style={styles.cardText}>
-                                    Best time to plant Irish Potatoes is during the early rainy season to ensure optimal growth.
+                                Igihe cyiza cyo gutera Ibirayi ni mu gihe cy'imvura ya mbere, kugira ngo byere neza.
                                 </Text>
                             </View>
                         </Pressable>
@@ -50,9 +50,10 @@ const CropManagement: React.FC = () => {
                         >
                             <Ionicons name="leaf" size={30} color="#fff" style={styles.icon} />
                             <View style={styles.cardContent}>
-                                <Text style={styles.cardTitle}>Fertilization</Text>
+                                <Text style={styles.cardTitle}>Ibijyanye No gufumbira</Text>
                                 <Text style={styles.cardText}>
-                                    Apply nitrogen-rich fertilizers to support the growth of Irish Potatoes and increase yield.
+                                Shyira ifumbire irimo anitrogen-rich kugira ngo ifashe gukura kw'ibirayi no kongera umusaruro.
+                                    
                                 </Text>
                             </View>
                         </Pressable>
@@ -69,9 +70,9 @@ const CropManagement: React.FC = () => {
                         >
                             <Ionicons name="bug" size={30} color="#fff" style={styles.icon} />
                             <View style={styles.cardContent}>
-                                <Text style={styles.cardTitle}>Pest Control</Text>
+                                <Text style={styles.cardTitle}>Kurwanya Ibyonnyi</Text>
                                 <Text style={styles.cardText}>
-                                    Use organic pesticides to keep common pests such as armyworms away from Irish Potatoes fields.
+                                Koresha imiti yica ibyonnyi ikozwe mu buryo bw'ubuhinzi kugira ngo ukomeze gukumira ibyonnyi nka armyworms mu mirima y'ibirayi by'Abahinde.
                                 </Text>
                             </View>
                         </Pressable>

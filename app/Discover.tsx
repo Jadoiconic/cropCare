@@ -50,7 +50,7 @@ const Discover = () => {
             <ScrollView>
                 <Text style={styles.title}>Shakisha</Text>
                 <Text style={styles.subtitle}>
-                    Dore zimwe mu mbuga zafasha abahinzi mu Rwanda ushobora gushyira kuri Discover Screen ya Rwanda CropCare:
+                    Dore zimwe mu mbuga zafasha abahinzi mu Rwanda :
                 </Text>
                 {resources.map((resource, index) => (
                     <View key={index} style={styles.resourceContainer}>

@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import {
-    View, Text, StyleSheet, Button, Alert, TouchableOpacity, TextInput, FlatList, ScrollView, ActivityIndicator
+    View,
+    Text,
+    StyleSheet,
+    Button,
+    Alert,
+    TouchableOpacity,
+    TextInput,
+    FlatList,
+    ScrollView,
+    ActivityIndicator,
 } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -10,7 +19,7 @@ import { collection, addDoc, query, where, onSnapshot, doc, updateDoc, deleteDoc
 import { onAuthStateChanged } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import moment from 'moment'; // To easily calculate remaining days
+import moment from 'moment';
 
 const PlantingSchedule: React.FC = () => {
     const [plantingDate, setPlantingDate] = useState<Date | null>(null);
@@ -58,7 +67,11 @@ const PlantingSchedule: React.FC = () => {
             });
             setScheduleList(schedules);
             setLoading(false);
-            await AsyncStorage.setItem(userId, JSON.stringify(schedules)); // Store in AsyncStorage
+
+            // Store in AsyncStorage only if schedules exist
+            if (schedules && schedules.length > 0) {
+                await AsyncStorage.setItem(userId, JSON.stringify(schedules));
+            }
         });
 
         const storedSchedules = await AsyncStorage.getItem(userId);
@@ -82,7 +95,7 @@ const PlantingSchedule: React.FC = () => {
 
     const savePlantingDate = async () => {
         if (!plantingDate || !cropType || performedActions.trim() === '' || farmName.trim() === '') {
-            Alert.alert('Input error', 'Please fill in all required fields.');
+            Alert.alert('Input error', 'Mwihangane, Mwuzuze amakuru yose Akenewe.');
             return;
         }
 
@@ -90,21 +103,21 @@ const PlantingSchedule: React.FC = () => {
             const newScheduleData = {
                 cropName: cropType,
                 userId,
-                status: 'Pending',
+                status: 'Igikorwa kiracyategereje',
                 farmName,
                 plantingDate: plantingDate.toISOString(),
                 performedActions,
             };
 
             await addDoc(collection(db, 'PlantingSchedules'), newScheduleData);
-            setScheduleList([...scheduleList, newScheduleData]);
+            setScheduleList((prevList) => [...prevList, newScheduleData]);
 
             await scheduleInitialNotification(plantingDate);
 
-            Alert.alert('Success', `The planting schedule for ${cropType} has been saved on ${plantingDate.toLocaleDateString()}.`);
+            Alert.alert('Byakunze', `Igena bikorwa ry' ${cropType} Ribitswe kuwa ${plantingDate.toLocaleDateString()}.`);
             clearForm();
         } catch (error) {
-            Alert.alert('Save error', 'Could not save planting schedule.');
+            Alert.alert('Save error', 'Kubika Igenabikorwa ntibyakunze.');
             console.error('Firestore Error:', error);
         }
     };
@@ -119,10 +132,10 @@ const PlantingSchedule: React.FC = () => {
     const markAsComplete = async (scheduleId: string) => {
         try {
             const scheduleRef = doc(db, 'PlantingSchedules', scheduleId);
-            await updateDoc(scheduleRef, { status: 'Completed' });
-            Alert.alert('Success', 'Schedule marked as completed.');
+            await updateDoc(scheduleRef, { status: 'Igikorwa Cyarangiye' });
+            Alert.alert('Byakunze', 'Kwemeza ko Igikorwa Cyarangiye Byakozwe Neza.');
         } catch (error) {
-            Alert.alert('Error', 'Could not update the schedule status.');
+            Alert.alert('Error', 'Kwemeza ko igikorwa cyarangiye ntibikunze.');
             console.error('Update Error:', error);
         }
     };
@@ -131,9 +144,9 @@ const PlantingSchedule: React.FC = () => {
         try {
             const scheduleRef = doc(db, 'PlantingSchedules', scheduleId);
             await deleteDoc(scheduleRef);
-            Alert.alert('Success', 'Schedule deleted.');
+            Alert.alert('Byakunze', 'Igikorwa Cyasibwe.');
         } catch (error) {
-            Alert.alert('Error', 'Could not delete the schedule.');
+            Alert.alert('Error', 'Gusiba Igikorwa ntibikunze.');
             console.error('Delete Error:', error);
         }
     };
@@ -141,8 +154,8 @@ const PlantingSchedule: React.FC = () => {
     const scheduleInitialNotification = async (date: Date) => {
         await Notifications.scheduleNotificationAsync({
             content: {
-                title: 'Reminder from CropCare',
-                body: `It's time to perform your ${cropType} task!`,
+                title: 'Kwibutsa Biturutse Kuri CropCare',
+                body: `Ni igihe cyo ${cropType} igikorwa!`,
                 sound: true,
             },
             trigger: { date: new Date(date.getTime() + 24 * 60 * 60 * 1000) }, // Next day
@@ -158,7 +171,7 @@ const PlantingSchedule: React.FC = () => {
 
     return (
         <ScrollView style={styles.container}>
-            <Text style={styles.title}>Planting Schedule</Text>
+            <Text style={styles.title}>Iteganya migambi kugihingwa</Text>
             <View style={styles.cropSelection}>
                 <TouchableOpacity
                     style={[styles.cropButton, cropType === 'Ibigori' && styles.selectedButton]}
@@ -175,93 +188,151 @@ const PlantingSchedule: React.FC = () => {
                     <Text style={styles.buttonText}>Ibirayi</Text>
                 </TouchableOpacity>
             </View>
-            <Button title="Select Planting Date" onPress={() => setShowDatePicker(true)} />
+            <Button title="Kanda Hano Uhitemo Itariki Watereyeho!" onPress={() => setShowDatePicker(true)} />
             {showDatePicker && (
                 <DateTimePicker
-                    maximumDate={new Date()} value={plantingDate || new Date()} mode="date" display="default" onChange={handleDateChange} />
+                    maximumDate={new Date()}
+                    value={plantingDate || new Date()}
+                    mode="date"
+                    display="default"
+                    onChange={handleDateChange}
+                />
             )}
             <TextInput
                 style={styles.input}
-                placeholder="Action to perform (e.g., Irrigation, Fertilizing)"
+                placeholder="Injiza Igikorwa Upanga Gukora (Urug., kuhira, kubagara, Gutera Umuti...)"
                 value={performedActions}
                 onChangeText={setPerformedActions}
             />
             <TextInput
                 style={styles.input}
-                placeholder="Farm Name"
+                placeholder="Injiza Aho Umurima Uherereye"
                 value={farmName}
                 onChangeText={setFarmName}
             />
             <TouchableOpacity onPress={savePlantingDate} style={styles.saveButton}>
-                <Text style={styles.saveButtonText}>Save</Text>
+                <Text style={styles.saveButtonText}>Bika Amakuru</Text>
             </TouchableOpacity>
 
-            {loading && <ActivityIndicator size="large" color="#0000ff" />}
-
-            {scheduleList.length > 0 && (
-                <View style={styles.tableContainer}>
-                    <Text style={styles.tableHeader}>Scheduled Tasks</Text>
-                    <FlatList
-                        data={scheduleList}
-                        scrollEnabled={false}
-                        keyExtractor={(item) => item.id}
-                        renderItem={({ item }) => (
-                            <View style={styles.tableRow}>
-                                <Text style={styles.tableCell}>
-                                    <Text style={styles.label}>Crop: </Text>
-                                    {item.cropName || 'N/A'}
-                                </Text>
-                                <Text style={styles.tableCell}>
-                                    <Text style={styles.label}>Planting Date: </Text>
-                                    {formatDate(item.plantingDate) || 'N/A'}
-                                </Text>
-                                <Text style={styles.tableCell}>
-                                    <Text style={styles.label}>Action: </Text>
-                                    {item.performedActions || 'N/A'}
-                                </Text>
-                                <Text style={styles.tableCell}>
-                                    <Text style={styles.label}>Farm: </Text>
-                                    {item.farmName || 'N/A'}
-                                </Text>
-                                <Text style={styles.tableCell}>
-                                    <Text style={styles.label}>Remaining Days: </Text>
-                                    {item.status === 'Completed' ? 'Completed' : calculateRemainingDays(item.plantingDate)}
-                                </Text>
-                                <TouchableOpacity onPress={() => markAsComplete(item.id)} style={styles.completeButton}>
-                                    <Text style={styles.buttonText}>Mark as Completed</Text>
-                                </TouchableOpacity>
+            {loading ? (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#0000ff" />
+                    <Text style={styles.loadingText}>Tegereza gato... Amakuru arashakwa.</Text>
+                </View>
+            ) : (
+                <FlatList
+                    data={scheduleList}
+                    keyExtractor={(item) => item.id}
+                    renderItem={({ item }) => {
+                        const remainingDays = calculateRemainingDays(item.plantingDate);
+                        return (
+                            <View style={styles.scheduleItem}>
+                                <Text style={styles.scheduleText}>Igihingwa: {item.cropName}</Text>
+                                <Text style={styles.scheduleText}>Itariki yo gutera: {formatDate(item.plantingDate)}</Text>
+                                <Text style={styles.scheduleText}>Amakuru yakorewe: {item.performedActions}</Text>
+                                <Text style={styles.scheduleText}>Aho Umurima: {item.farmName}</Text>
+                                <Text style={styles.scheduleText}>Icyiciro: {item.status}</Text>
+                                <Text style={styles.scheduleText}>Amasaha asigaye: {remainingDays} iminsi</Text>
+                                {item.status !== 'Igikorwa Cyarangiye' && (
+                                    <TouchableOpacity onPress={() => markAsComplete(item.id)} style={styles.actionButton}>
+                                        <Text style={styles.actionButtonText}>Shyiraho Ko Cyarangiye</Text>
+                                    </TouchableOpacity>
+                                )}
                                 <TouchableOpacity onPress={() => deleteSchedule(item.id)} style={styles.deleteButton}>
-                                    <Text style={styles.buttonText}>Delete</Text>
+                                    <Text style={styles.deleteButtonText}>Siba</Text>
                                 </TouchableOpacity>
                             </View>
-                        )}
-                    />
-                </View>
+                        );
+                    }}
+                />
             )}
         </ScrollView>
     );
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-    title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20 },
-    cropSelection: { flexDirection: 'row', marginBottom: 20 },
-    cropButton: {
-        flex: 1, padding: 10, borderWidth: 1, borderColor: '#ccc', alignItems: 'center',
-        justifyContent: 'center', borderRadius: 5, marginHorizontal: 5
+    container: {
+        padding: 20,
     },
-    selectedButton: { backgroundColor: '#007bff', borderColor: '#007bff' },
-    buttonText: { color: '#000' },
-    input: { height: 40, borderColor: 'gray', borderWidth: 1, marginBottom: 10, paddingLeft: 10 },
-    saveButton: { backgroundColor: '#28a745', padding: 15, alignItems: 'center', borderRadius: 5 },
-    saveButtonText: { color: 'white', fontWeight: 'bold' },
-    tableContainer: { marginTop: 20 },
-    tableHeader: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
-    tableRow: { marginBottom: 10, borderBottomWidth: 1, borderColor: '#ccc', paddingVertical: 10 },
-    tableCell: { flexDirection: 'row', justifyContent: 'space-between', padding: 5 },
-    label: { fontWeight: 'bold' },
-    completeButton: { backgroundColor: '#ffc107', padding: 5, marginVertical: 5, alignItems: 'center' },
-    deleteButton: { backgroundColor: '#dc3545', padding: 5, marginVertical: 5, alignItems: 'center' }
+    title: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        textAlign: 'center',
+        marginBottom: 20,
+    },
+    cropSelection: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        marginBottom: 20,
+    },
+    cropButton: {
+        flex: 1,
+        padding: 10,
+        backgroundColor: '#f0f0f0',
+        borderRadius: 5,
+        alignItems: 'center',
+    },
+    selectedButton: {
+        backgroundColor: '#4CAF50',
+    },
+    buttonText: {
+        marginTop: 5,
+        color: 'black',
+    },
+    input: {
+        height: 40,
+        borderColor: 'gray',
+        borderWidth: 1,
+        marginBottom: 10,
+        paddingHorizontal: 10,
+    },
+    saveButton: {
+        backgroundColor: '#4CAF50',
+        padding: 10,
+        borderRadius: 5,
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    saveButtonText: {
+        color: 'white',
+        fontSize: 16,
+    },
+    loadingContainer: {
+        alignItems: 'center',
+        marginVertical: 20,
+    },
+    loadingText: {
+        marginTop: 10,
+    },
+    scheduleItem: {
+        backgroundColor: '#f9f9f9',
+        padding: 15,
+        borderRadius: 5,
+        marginBottom: 10,
+    },
+    scheduleText: {
+        fontSize: 16,
+        marginVertical: 2,
+    },
+    actionButton: {
+        backgroundColor: '#4CAF50',
+        padding: 10,
+        borderRadius: 5,
+        alignItems: 'center',
+        marginVertical: 5,
+    },
+    actionButtonText: {
+        color: 'white',
+    },
+    deleteButton: {
+        backgroundColor: 'red',
+        padding: 10,
+        borderRadius: 5,
+        alignItems: 'center',
+    },
+    deleteButtonText: {
+        color: 'white',
+    },
 });
 
 export default PlantingSchedule;

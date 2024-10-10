@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, FlatList, TextInput, TouchableOpacity, Button } from 'react-native';
-import { collection, addDoc, getDocs, getDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, getDoc, serverTimestamp, doc } from 'firebase/firestore';
 import { auth, db } from '@/services/config';
 
 // Helper function to get posts
@@ -91,21 +91,22 @@ const Forum = () => {
             <View style={styles.inputContainer}>
                 <TextInput
                     style={styles.input}
-                    placeholder="Write a post..."
+                    placeholder="Andika igitekerezo..."
                     value={newPostContent}
                     onChangeText={setNewPostContent}
                 />
-                <Button title="Post" onPress={handleCreatePost} />
+                <Button title="Posta" onPress={handleCreatePost} />
             </View>
 
             <FlatList
                 data={posts}
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => <Post post={item} />}
+                extraData={posts} // This will help to re-render the list when posts change
             />
 
             <TouchableOpacity style={styles.chatButton}>
-                <Text style={styles.chatButtonText}>Chat with Experts</Text>
+                <Text style={styles.chatButtonText}>Twandikire Abajyanama</Text>
             </TouchableOpacity>
         </View>
     );
@@ -148,11 +149,11 @@ const Post = ({ post }) => {
     return (
         <View style={styles.post}>
             <Text style={styles.postText}>{post.content}</Text>
-            <Text style={styles.postOwnerText}>Posted by: {post.userName}</Text>
+            <Text style={styles.postOwnerText}>Yanditswe na: {post.userName}</Text>
 
             {!replyInputVisible && (
                 <TouchableOpacity onPress={() => setReplyInputVisible(true)}>
-                    <Text style={styles.replyText}>Reply</Text>
+                    <Text style={styles.replyText}>Subiza</Text>
                 </TouchableOpacity>
             )}
 
@@ -160,19 +161,19 @@ const Post = ({ post }) => {
                 <View style={styles.replyInputContainer}>
                     <TextInput
                         style={styles.input}
-                        placeholder="Write a reply..."
+                        placeholder="Andika igisubizo..."
                         value={newReplyText}
                         onChangeText={setNewReplyText}
                     />
                     <TouchableOpacity onPress={handleCreateReply}>
-                        <Text style={styles.replyButton}>Reply</Text>
+                        <Text style={styles.replyButton}>Subiza</Text>
                     </TouchableOpacity>
                 </View>
             )}
 
             <TouchableOpacity onPress={toggleReplies}>
                 <Text style={styles.replyText}>
-                    {replies.length} {replies.length === 1 ? 'Reply' : 'Replies'}
+                    {replies.length} {replies.length === 1 ? 'Igisubizo' : 'Ibitekerezo'}
                 </Text>
             </TouchableOpacity>
 
@@ -180,7 +181,7 @@ const Post = ({ post }) => {
                 <View style={styles.repliesContainer}>
                     {replies.map((reply) => (
                         <Text key={reply.id} style={styles.replyText}>
-                            - {reply.replyText} (by {reply.userName}) {/* Displaying userName instead of email */}
+                            - {reply.replyText} (na {reply.userName})
                         </Text>
                     ))}
                 </View>
@@ -274,6 +275,6 @@ const styles = StyleSheet.create({
     replyButton: {
         color: '#007BFF',
         marginLeft: 10,
-        fontWeight: 'bold', // Bold text for reply button
+        fontWeight: 'bold', // Bold text for the reply button
     },
 });

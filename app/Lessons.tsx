@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View, FlatList, TouchableOpacity, Alert } from "react-native";
-import { db } from "@/services/config";
+import { db } from "@/services/config"; // Adjust your import based on your file structure
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import * as FileSystem from 'expo-file-system';
 import * as Linking from 'expo-linking';
@@ -11,11 +11,11 @@ interface PdfFile {
   url: string;
   uploaderId: string;
   createdAt: string;
-  title: string;        // Added title
-  description: string;  // Added description
+  title: string;
+  description: string;
 }
 
-export default function FilesScreen() {
+const PdfScreen = () => {
   const [pdfFiles, setPdfFiles] = useState<PdfFile[]>([]);
 
   useEffect(() => {
@@ -33,19 +33,27 @@ export default function FilesScreen() {
       setPdfFiles(files);
     } catch (error) {
       console.error("Error fetching PDF files:", error);
+      Alert.alert("Error", "Unable to fetch PDF files. Please check your permissions.");
     }
   };
 
   const openPdf = async (url: string, filename: string) => {
     try {
       const localUri = `${FileSystem.documentDirectory}${filename}`;
-      const downloadedFile = await FileSystem.downloadAsync(url, localUri);
       
-      if (downloadedFile.status === 200) {
-        await Linking.openURL(downloadedFile.uri);
-      } else {
-        Alert.alert('Error', 'Failed to download the file');
+      // Check if the file already exists
+      const fileExists = await FileSystem.getInfoAsync(localUri);
+      if (!fileExists.exists) {
+        // Download the file if it doesn't exist
+        const response = await fetch(url);
+        const blob = await response.blob();
+        await FileSystem.writeAsStringAsync(localUri, await blob.text(), {
+          encoding: FileSystem.EncodingType.Base64,
+        });
       }
+      
+      // Open the file
+      await Linking.openURL(localUri);
     } catch (error) {
       console.error("Error opening PDF:", error);
       Alert.alert('Error', 'Could not open the PDF file');
@@ -67,7 +75,7 @@ export default function FilesScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>My Files</Text>
+      <Text style={styles.title}>Ibitabo Bifasha Kwihugura Mubuhizi bugezweho haba Ibirayi Cg Ibigori</Text>
       <FlatList
         data={pdfFiles}
         renderItem={renderPdfItem}
@@ -76,19 +84,19 @@ export default function FilesScreen() {
       />
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#f8f8f8', // Light background for better contrast
+    backgroundColor: '#f8f8f8',
   },
   title: {
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 20,
-    color: '#333', // Dark color for better readability
+    color: '#333',
   },
   list: {
     flex: 1,
@@ -97,27 +105,29 @@ const styles = StyleSheet.create({
     padding: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
-    backgroundColor: '#fff', // White background for PDF items
+    backgroundColor: '#fff',
     borderRadius: 5,
     marginBottom: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
-    elevation: 2, // Elevation for Android
+    elevation: 2,
   },
   pdfTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#007BFF', // Blue color for titles
+    color: '#007BFF',
   },
   pdfDescription: {
     fontSize: 14,
-    color: '#555', // Grey color for descriptions
+    color: '#555',
     marginVertical: 5,
   },
   uploadDate: {
     fontSize: 12,
-    color: '#999', // Lighter color for upload date
+    color: '#999',
   },
 });
+
+export default PdfScreen;
