@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, FlatList, TextInput, TouchableOpacity, Button } from 'react-native';
 import { collection, addDoc, getDocs, getDoc, serverTimestamp, doc } from 'firebase/firestore';
 import { auth, db } from '@/services/config';
+import { router } from 'expo-router';
 
 // Helper function to get posts
 const getPosts = async () => {
@@ -34,19 +35,19 @@ const getUserName = async (userId) => {
 
 // Helper function to create a new post
 const createPost = async (content) => {
-    const userId = auth.currentUser?.uid;  
+    const userId = auth.currentUser?.uid;
     const userName = await getUserName(userId);  // Fetching user name
     await addDoc(collection(db, 'Posts'), {
         content,
         userId,
-        userName, 
+        userName,
         createdAt: serverTimestamp(),
     });
 };
 
 // Helper function to create a new reply
 const createReply = async (postId, replyText) => {
-    const userId = auth.currentUser?.uid;  
+    const userId = auth.currentUser?.uid;
     const userName = await getUserName(userId);  // Fetching user name
     await addDoc(collection(db, `Posts/${postId}/replies`), {
         replyText,
@@ -60,6 +61,10 @@ const createReply = async (postId, replyText) => {
 const Forum = () => {
     const [posts, setPosts] = useState([]);
     const [newPostContent, setNewPostContent] = useState('');
+    const currentUser = auth.currentUser?.email
+    if (!currentUser) {
+        router.navigate("/auth")
+    }
 
     useEffect(() => {
         const fetchPosts = async () => {
@@ -77,8 +82,8 @@ const Forum = () => {
         if (newPostContent.trim()) {
             try {
                 await createPost(newPostContent);
-                setNewPostContent('');  
-                const fetchedPosts = await getPosts();  
+                setNewPostContent('');
+                const fetchedPosts = await getPosts();
                 setPosts(fetchedPosts);
             } catch (error) {
                 console.error("Error creating post:", error);
@@ -117,7 +122,7 @@ const Post = ({ post }) => {
     const [repliesVisible, setRepliesVisible] = useState(false);
     const [replies, setReplies] = useState([]);
     const [newReplyText, setNewReplyText] = useState('');
-    const [replyInputVisible, setReplyInputVisible] = useState(false); 
+    const [replyInputVisible, setReplyInputVisible] = useState(false);
 
     useEffect(() => {
         const fetchReplies = async () => {

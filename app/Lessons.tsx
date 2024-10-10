@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View, FlatList, TouchableOpacity, Alert } from "react-native";
 import { db } from "@/services/config"; // Adjust your import based on your file structure
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
-import * as FileSystem from 'expo-file-system';
 import * as Linking from 'expo-linking';
 
 interface PdfFile {
@@ -37,23 +36,10 @@ const PdfScreen = () => {
     }
   };
 
-  const openPdf = async (url: string, filename: string) => {
+  const openPdf = async (url: string) => {
     try {
-      const localUri = `${FileSystem.documentDirectory}${filename}`;
-      
-      // Check if the file already exists
-      const fileExists = await FileSystem.getInfoAsync(localUri);
-      if (!fileExists.exists) {
-        // Download the file if it doesn't exist
-        const response = await fetch(url);
-        const blob = await response.blob();
-        await FileSystem.writeAsStringAsync(localUri, await blob.text(), {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-      }
-      
-      // Open the file
-      await Linking.openURL(localUri);
+      // Open the URL in the browser
+      await Linking.openURL(url);
     } catch (error) {
       console.error("Error opening PDF:", error);
       Alert.alert('Error', 'Could not open the PDF file');
@@ -61,9 +47,9 @@ const PdfScreen = () => {
   };
 
   const renderPdfItem = ({ item }: { item: PdfFile }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.pdfItem}
-      onPress={() => openPdf(item.url, item.name)}
+      onPress={() => openPdf(item.url)}
     >
       <Text style={styles.pdfTitle}>{item.title}</Text>
       <Text style={styles.pdfDescription}>{item.description}</Text>
@@ -75,7 +61,7 @@ const PdfScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Ibitabo Bifasha Kwihugura Mubuhizi bugezweho haba Ibirayi Cg Ibigori</Text>
+      <Text style={styles.title}>Ibitabo Bifasha Kwihugura Mubuhinzi bugezweho haba Ibirayi Cg Ibigori</Text>
       <FlatList
         data={pdfFiles}
         renderItem={renderPdfItem}

@@ -116,6 +116,20 @@ const _layout = () => {
                 }}
             />
             <Tabs.Screen
+                name="admin/index"
+                options={{
+                    tabBarButton: () => null,
+                    title: "Fertilization"
+                }}
+            />
+            <Tabs.Screen
+                name="expert/index"
+                options={{
+                    tabBarButton: () => null,
+                    title: "Fertilization"
+                }}
+            />
+            <Tabs.Screen
                 name="crop-management/PestControl"
                 options={{
                     tabBarButton: () => null,
