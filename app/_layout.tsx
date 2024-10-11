@@ -118,7 +118,9 @@ export default function Layout() {
             drawerItemStyle: { display: 'none' },
             headerShown: false,
           }}
+          
         />
+        
       </Drawer>
     </GestureHandlerRootView>
   );

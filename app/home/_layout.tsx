@@ -21,7 +21,7 @@ const _layout = () => {
                     if (userDoc.exists()) {
                         const userData = userDoc.data();
                         console.log("User Data: ", userData); // Ensure the user data is retrieved
-                        setIsAdmin(userData?.role === 'admin');
+                        setIsAdmin(userData?.role === 'Admin');
                     } else {
                         console.log("No user document found for this UID.");
                     }
@@ -47,10 +47,15 @@ const _layout = () => {
                     </TouchableOpacity>
                 ),
                 headerRight: () => (
-                    <TouchableOpacity onPress={() => router.navigate("/home/Chats")} style={{ paddingHorizontal: 10 }}>
-                        <Ionicons name="person-circle-outline" size={30} color="white" />
+                    <TouchableOpacity 
+                        onPress={() => router.navigate("/home/Chats")} 
+                        style={{ position: 'relative', paddingHorizontal: 10 }}
+                    >
+                        <Ionicons name="chatbubble" size={30} color="white" />
                     </TouchableOpacity>
                 ),
+                
+                
                 tabBarActiveTintColor: 'green',
                 tabBarLabelStyle: {
                     fontWeight: 'bold'
@@ -66,7 +71,7 @@ const _layout = () => {
             <Tabs.Screen
                 name='index'
                 options={{
-                    title: "Home",
+                    title: "Ahabanza",
                     tabBarIcon: ({ size, color }) => (
                         <Ionicons name='home' size={size} color={color} />
                     )
@@ -75,7 +80,7 @@ const _layout = () => {
             <Tabs.Screen
                 name='Forum'
                 options={{
-                    title: "Forum",
+                    title: "Uruganiriro",
                     tabBarIcon: ({ size, color }) => (
                         <AntDesign name='message1' size={size} color={color} />
                     )
@@ -119,14 +124,14 @@ const _layout = () => {
                 name="admin/index"
                 options={{
                     tabBarButton: () => null,
-                    title: "Fertilization"
+                    title: "Admin Dashboard"
                 }}
             />
             <Tabs.Screen
                 name="expert/index"
                 options={{
                     tabBarButton: () => null,
-                    title: "Fertilization"
+                    title: "Expert Dashboard"
                 }}
             />
             <Tabs.Screen
@@ -140,7 +145,7 @@ const _layout = () => {
                 name="Chats"
                 options={{
                     tabBarButton: () => null,
-                    title: "Pest Control"
+                    title: "Expert Chat"
                 }}
             />
         </Tabs>
