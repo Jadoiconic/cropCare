@@ -40,10 +40,10 @@ const SignInScreen = () => {
             // Navigate based on user role
             switch (role) {
                 case "Admin":
-                    router.navigate("/home/admin/"); // Admin dashboard
+                    router.navigate("/home/admin_home"); // Admin dashboard
                     break;
                 case "Expert":
-                    router.navigate("/home/expert/"); // Expert dashboard
+                    router.navigate("/home/expert_home"); // Expert dashboard
                     break;
                 case "Farmer":
                     router.navigate("/home/"); // Farmer dashboard
