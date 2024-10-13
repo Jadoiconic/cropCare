@@ -14,8 +14,8 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { collection, query, onSnapshot, addDoc, Timestamp, orderBy, where, getDocs, doc, setDoc } from 'firebase/firestore';
-import { db, auth } from '@/services/config'; // Make sure Firebase config is properly set up
+import { collection, query, onSnapshot, addDoc, Timestamp, orderBy, where } from 'firebase/firestore';
+import { db, auth } from '@/services/config'; // Ensure your Firebase config is correct
 
 interface User {
   id: string;
@@ -28,88 +28,44 @@ interface Message {
   sender: string;
 }
 
-const CombinedChatScreen = () => {
-  const [users, setUsers] = useState<User[]>([]);
+const ExpertChatScreen = () => {
+  const [farmers, setFarmers] = useState<User[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState<string>('');
   const [loadingMessages, setLoadingMessages] = useState<boolean>(true);
   const [showChat, setShowChat] = useState<boolean>(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [loadingUsers, setLoadingUsers] = useState<boolean>(true);
-  const [isExpert, setIsExpert] = useState<boolean>(false);
-  const [conversations, setConversations] = useState<User[]>([]);
+  const [selectedFarmer, setSelectedFarmer] = useState<User | null>(null);
+  const user = auth.currentUser;
   const [chatId, setChatId] = useState<string | null>(null);
 
-  const user = auth.currentUser;
-
   useEffect(() => {
-    const fetchRole = async () => {
-      const userRef = collection(db, 'farmers');
-      const userQuery = query(userRef, where('email', '==', user?.email));
-      const unsubscribe = onSnapshot(userQuery, (snapshot) => {
-        const currentUserData = snapshot.docs[0]?.data();
-        if (currentUserData) {
-          setIsExpert(currentUserData.role === 'Expert');
-        }
-      });
+    fetchFarmers();
+  }, []);
 
-      return () => unsubscribe();
-    };
-
-    fetchRole();
-    fetchUsers();
-  }, [isExpert]);
-
-  const fetchUsers = () => {
-    if (isExpert) {
-      fetchConversations();
-    } else {
-      const usersQuery = query(collection(db, 'farmers'), where('role', '==', 'Expert'));
-      const unsubscribe = onSnapshot(usersQuery, (snapshot) => {
-        const userList = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as User[];
-        setUsers(userList);
-        setLoadingUsers(false);
-      }, (error) => {
-        Alert.alert('Error', 'Failed to load experts. Please try again later.');
-        setLoadingUsers(false);
-      });
-
-      return () => unsubscribe();
-    }
-  };
-
-  const fetchConversations = () => {
-    const conversationQuery = query(collection(db, 'chats'), where('expertId', '==', auth.currentUser?.uid));
-    const unsubscribe = onSnapshot(conversationQuery, async (snapshot) => {
-      const conversationList = await Promise.all(
-        snapshot.docs.map(async (doc) => {
-          const { farmerId } = doc.data();
-          const farmerDoc = await doc(db, 'farmers', farmerId).get();
-          return { id: farmerDoc.id, ...farmerDoc.data() } as User;
-        })
-      );
-      setConversations(conversationList);
-      setLoadingUsers(false);
+  const fetchFarmers = () => {
+    const farmersQuery = query(collection(db, 'farmers'), where('role', '==', 'Farmer'));
+    const unsubscribe = onSnapshot(farmersQuery, (snapshot) => {
+      const farmerList = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as User[];
+      setFarmers(farmerList);
     }, (error) => {
-      Alert.alert('Error', 'Failed to load conversations. Please try again later.');
-      setLoadingUsers(false);
+      Alert.alert('Error', 'Failed to load farmers. Please try again later.');
     });
 
     return () => unsubscribe();
   };
 
-  const handleUserSelect = (user: User) => {
+  const handleFarmerSelect = (farmer: User) => {
     if (!user) {
       Alert.alert('Not Authenticated', 'You need to log in to chat.');
       return;
     }
 
-    const generatedChatId = generateChatId(auth.currentUser?.uid || '', user.id);
+    const generatedChatId = generateChatId(user.uid, farmer.id);
     setChatId(generatedChatId);
-    setSelectedUser(user);
+    setSelectedFarmer(farmer);
     fetchMessages(generatedChatId);
     setShowChat(true);
   };
@@ -140,7 +96,7 @@ const CombinedChatScreen = () => {
     }
 
     if (!chatId || !user) {
-      Alert.alert('No Chat Selected', 'Please select a user to chat with.');
+      Alert.alert('No Chat Selected', 'Please select a farmer to chat with.');
       return;
     }
 
@@ -151,35 +107,19 @@ const CombinedChatScreen = () => {
         sender: user.uid,
       };
 
-      // Check if the chat document exists
-      const chatDocRef = doc(db, 'chats', chatId);
-      const chatDocSnapshot = await getDocs(query(chatDocRef));
-
-      if (chatDocSnapshot.empty) {
-        // Create chat document if it doesn't exist
-        await setDoc(chatDocRef, {
-          chatId: chatId,
-          createdAt: Timestamp.now(),
-          expertId: selectedUser?.id,
-          farmerId: auth.currentUser?.uid,
-        });
-      }
-
-      // Add message to Firestore
+      // Send the message to the messages subcollection
       await addDoc(collection(db, `chats/${chatId}/messages`), messageData);
-      console.log('Message sent:', messageData);
 
-      setMessage('');
-      Keyboard.dismiss();
+      setMessage(''); // Clear the input field
+      Keyboard.dismiss(); // Dismiss the keyboard
     } catch (error) {
-      console.error('Error sending message:', error);
       Alert.alert('Error', 'Failed to send message. Please try again.');
     }
   };
 
-  const renderUserCard = ({ item }: { item: User }) => (
-    <TouchableOpacity style={styles.userCard} onPress={() => handleUserSelect(item)}>
-      <Text style={styles.userName}>{item.name}</Text>
+  const renderFarmerCard = ({ item }: { item: User }) => (
+    <TouchableOpacity style={styles.farmerCard} onPress={() => handleFarmerSelect(item)}>
+      <Text style={styles.farmerName}>{item.name}</Text>
     </TouchableOpacity>
   );
 
@@ -213,7 +153,7 @@ const CombinedChatScreen = () => {
             <TouchableOpacity onPress={() => setShowChat(false)} style={styles.backButton}>
               <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
-            <Text style={styles.header}>Chat with {selectedUser?.name}</Text>
+            <Text style={styles.header}>Chat with {selectedFarmer?.name}</Text>
             {renderMessagesList()}
             <View style={styles.inputContainer}>
               <TextInput
@@ -228,20 +168,14 @@ const CombinedChatScreen = () => {
             </View>
           </View>
         ) : (
-          <View style={styles.userListContainer}>
-            <Text style={styles.header}>
-              {isExpert ? 'Your Conversations' : 'Available Experts'}
-            </Text>
-            {loadingUsers ? (
-              <ActivityIndicator size="large" color="#0000ff" />
-            ) : (
-              <FlatList
-                data={isExpert ? conversations : users}
-                keyExtractor={(item) => item.id}
-                renderItem={renderUserCard}
-                style={styles.userList}
-              />
-            )}
+          <View style={styles.farmerListContainer}>
+            <Text style={styles.header}>Farmers</Text>
+            <FlatList
+              data={farmers}
+              keyExtractor={(item) => item.id}
+              renderItem={renderFarmerCard}
+              style={styles.farmerList}
+            />
           </View>
         )}
       </KeyboardAvoidingView>
@@ -252,27 +186,26 @@ const CombinedChatScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 10,
+    padding: 20,
+    backgroundColor: '#ffffff',
   },
-  userCard: {
+  farmerCard: {
     padding: 15,
+    borderWidth: 1,
+    borderColor: '#ccc',
     borderRadius: 10,
-    marginVertical: 5,
+    marginBottom: 10,
   },
-  userName: {
-    fontSize: 18,
+  farmerName: {
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   chatContainer: {
     flex: 1,
   },
-  backButton: {
-    marginBottom: 10,
-  },
-  backButtonText: {
-    color: '#007BFF',
-  },
   header: {
-    fontSize: 22,
+    fontSize: 20,
+    fontWeight: 'bold',
     marginBottom: 10,
   },
   inputContainer: {
@@ -282,9 +215,10 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    padding: 10,
     borderWidth: 1,
-    borderRadius: 8,
+    borderColor: '#ccc',
+    borderRadius: 10,
+    padding: 10,
     marginRight: 10,
   },
   messagesList: {
@@ -294,29 +228,36 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   messageCard: {
+    borderRadius: 10,
     padding: 10,
-    borderRadius: 5,
     marginVertical: 5,
-    maxWidth: '75%',
   },
   userMessage: {
     alignSelf: 'flex-end',
-    backgroundColor: '#DCF8C6',
+    backgroundColor: '#4CAF50',
+    color: '#fff',
   },
   otherMessage: {
     alignSelf: 'flex-start',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#f1f1f1',
   },
   timestamp: {
     fontSize: 10,
-    color: '#808080',
+    color: '#888',
+    marginTop: 5,
   },
-  userList: {
+  backButton: {
+    marginBottom: 10,
+  },
+  backButtonText: {
+    color: '#007BFF',
+  },
+  farmerListContainer: {
     flex: 1,
   },
-  userListContainer: {
-    flex: 1,
+  farmerList: {
+    marginTop: 10,
   },
 });
 
-export default CombinedChatScreen;
+export default ExpertChatScreen;

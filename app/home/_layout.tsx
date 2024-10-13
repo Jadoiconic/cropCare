@@ -121,14 +121,14 @@ const _layout = () => {
                 }}
             />
             <Tabs.Screen
-                name="admin/index"
+                name="admin_home"
                 options={{
                     tabBarButton: () => null,
                     title: "Admin Dashboard"
                 }}
             />
             <Tabs.Screen
-                name="expert/index"
+                name="expert_home"
                 options={{
                     tabBarButton: () => null,
                     title: "Expert Dashboard"
