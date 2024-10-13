@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   SafeAreaView,
   TextInput,
+  Button,
   Alert,
   Keyboard,
   KeyboardAvoidingView,
@@ -18,7 +19,6 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { collection, query, onSnapshot, addDoc, Timestamp, orderBy, where } from 'firebase/firestore'; 
 import { db, auth } from '@/services/config'; 
-import { Ionicons } from '@expo/vector-icons'; // Import Ionicons
 
 interface User {
   id: string;
@@ -42,7 +42,6 @@ const FarmerChatScreen = () => {
   const user = auth.currentUser;
   const [chatId, setChatId] = useState<string | null>(null);
 
-  // Fetch experts on component mount
   useEffect(() => {
     fetchExperts();
   }, []);
@@ -56,7 +55,6 @@ const FarmerChatScreen = () => {
       })) as User[];
       setExperts(expertList);
     }, (error) => {
-      console.error('Error fetching experts:', error);
       Alert.alert('Error', 'Failed to load experts. Please try again later.');
     });
 
@@ -65,7 +63,6 @@ const FarmerChatScreen = () => {
 
   const handleExpertSelect = (expert: User) => {
     if (!user) {
-      console.log('User not authenticated.');
       Alert.alert('Not Authenticated', 'You need to log in to chat.');
       return;
     }
@@ -86,11 +83,9 @@ const FarmerChatScreen = () => {
     const messagesQuery = query(collection(db, `chats/${chatId}/messages`), orderBy('timestamp', 'asc'));
     const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
       const messagesList = snapshot.docs.map((doc) => doc.data() as Message);
-      console.log('Fetched Messages:', messagesList);
       setMessages(messagesList);
       setLoadingMessages(false);
     }, (error) => {
-      console.error('Error fetching messages:', error);
       Alert.alert('Error', 'Failed to load messages. Please try again later.');
       setLoadingMessages(false);
     });
@@ -99,8 +94,8 @@ const FarmerChatScreen = () => {
   };
 
   const sendMessage = async () => {
-    if (message.trim() === '' && !image) {
-      Alert.alert('Empty Message', 'Please enter a message or select an image to send.');
+    if (message.trim() === '') {
+      Alert.alert('Empty Message', 'Please enter a message to send.');
       return;
     }
 
@@ -111,7 +106,7 @@ const FarmerChatScreen = () => {
 
     try {
       const messageData: Message = {
-        text: message.trim() === '' ? undefined : message.trim(),
+        text: message.trim(),
         timestamp: Timestamp.now(),
         sender: user.uid,
       };
@@ -120,7 +115,6 @@ const FarmerChatScreen = () => {
       setMessage(''); // Clear the input field
       Keyboard.dismiss(); // Dismiss the keyboard
     } catch (error) {
-      console.error('Error sending message:', error);
       Alert.alert('Error', 'Failed to send message. Please try again.');
     }
   };
@@ -140,7 +134,6 @@ const FarmerChatScreen = () => {
 
     if (!result.canceled && result.assets) {
       const imageUri = result.assets[0].uri;
-      console.log('Picked Image URI:', imageUri);
       await uploadImage(imageUri);
     }
   };
@@ -180,11 +173,11 @@ const FarmerChatScreen = () => {
           renderItem={({ item }) => (
             <View style={[styles.messageCard, item.sender === user?.uid ? styles.userMessage : styles.otherMessage]}>
               {item.text ? (
-                <Text>{item.text}</Text>
+                <Text>{item.text}</Text> // Text is wrapped correctly
               ) : item.imageUrl ? (
                 <Image source={{ uri: item.imageUrl }} style={styles.imageMessage} />
               ) : null}
-              <Text style={styles.timestamp}>{item.timestamp.toDate().toLocaleString()}</Text>
+              <Text style={styles.timestamp}>{item.timestamp.toDate().toLocaleString()}</Text> // Timestamp is also wrapped correctly
             </View>
           )}
           style={styles.messagesList}
@@ -202,7 +195,7 @@ const FarmerChatScreen = () => {
             <TouchableOpacity onPress={() => setShowChat(false)} style={styles.backButton}>
               <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
-            <Text style={styles.header}>Chat with {selectedExpert?.name}</Text>
+            <Text style={styles.header}>Chat with {selectedExpert?.name || 'Unknown Expert'}</Text> {/* Handle undefined */}
             {renderMessagesList()}
             <View style={styles.inputContainer}>
               <TextInput
@@ -213,12 +206,8 @@ const FarmerChatScreen = () => {
                 multiline={true}
                 numberOfLines={3}
               />
-              <TouchableOpacity onPress={sendMessage} style={styles.iconButton}>
-                <Ionicons name="send" size={24} color="#4CAF50" />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleImagePick} style={styles.iconButton}>
-                <Ionicons name="image" size={24} color="#2196F3" />
-              </TouchableOpacity>
+              <Button title="Send" onPress={sendMessage} color="#4CAF50" />
+              <Button title="Pick Image" onPress={handleImagePick} color="#2196F3" />
             </View>
           </View>
         ) : (
@@ -282,47 +271,36 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   messageCard: {
-    padding: 10,
     borderRadius: 10,
-    marginBottom: 10,
-    maxWidth: '80%',
+    padding: 10,
+    marginVertical: 5,
   },
   userMessage: {
-    backgroundColor: '#d1ffd1',
     alignSelf: 'flex-end',
+    backgroundColor: '#4CAF50',
+    color: '#ffffff',
   },
   otherMessage: {
-    backgroundColor: '#f0f0f0',
     alignSelf: 'flex-start',
+    backgroundColor: '#ccc',
+    color: '#000000',
   },
   timestamp: {
     fontSize: 10,
-    color: '#888',
-    marginTop: 5,
-  },
-  imageMessage: {
-    width: 200,
-    height: 200,
-    borderRadius: 10,
+    color: '#666',
   },
   backButton: {
     marginBottom: 10,
   },
   backButtonText: {
-    color: '#2196F3',
     fontSize: 16,
+    color: '#007BFF',
   },
-  iconButton: {
-    marginLeft: 10,
-    padding: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  expertListContainer: {
-    flex: 1,
-  },
-  expertList: {
-    marginTop: 10,
+  imageMessage: {
+    width: 200,
+    height: 200,
+    borderRadius: 10,
+    marginVertical: 5,
   },
 });
 

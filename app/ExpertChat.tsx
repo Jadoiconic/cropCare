@@ -13,36 +13,33 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
-  Modal,
-  Pressable,
 } from 'react-native';
-import { collection, query, onSnapshot, addDoc, Timestamp, orderBy, where } from 'firebase/firestore'; 
-import { db, auth } from '@/services/config'; 
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system'; // Import FileSystem for downloading images
-import { Ionicons } from '@expo/vector-icons';
+import { collection, query, onSnapshot, addDoc, Timestamp, orderBy, where } from 'firebase/firestore'; 
+import { db, auth, storage } from '@/services/config'; // Firebase configuration file
+import { Ionicons } from '@expo/vector-icons'; // Icons from Ionicons
+import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage'; // For Firebase Storage
 
-interface User {
+interface Farmer {
   id: string;
   name: string;
 }
 
 interface Message {
-  text: string;
+  text?: string;
+  imageUrl?: string;
   timestamp: Timestamp;
   sender: string;
-  imageUrl?: string;
 }
 
 const ExpertChatScreen = () => {
-  const [farmers, setFarmers] = useState<User[]>([]);
+  const [farmers, setFarmers] = useState<Farmer[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState<string>('');
   const [loadingMessages, setLoadingMessages] = useState<boolean>(true);
   const [showChat, setShowChat] = useState<boolean>(false);
-  const [selectedFarmer, setSelectedFarmer] = useState<User | null>(null);
-  const [imageModalVisible, setImageModalVisible] = useState<boolean>(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedFarmer, setSelectedFarmer] = useState<Farmer | null>(null);
+  const [image, setImage] = useState<string | null>(null); // To hold the image URI
   const user = auth.currentUser;
   const [chatId, setChatId] = useState<string | null>(null);
 
@@ -56,16 +53,17 @@ const ExpertChatScreen = () => {
       const farmerList = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-      })) as User[];
+      })) as Farmer[];
       setFarmers(farmerList);
     }, (error) => {
-      Alert.alert('Error', 'Failed to load farmers. Please try again later.');
+      console.error('Error fetching farmers:', error);
+      Alert.alert('Error', 'Failed to load farmers.');
     });
 
     return () => unsubscribe();
   };
 
-  const handleFarmerSelect = (farmer: User) => {
+  const handleFarmerSelect = (farmer: Farmer) => {
     if (!user) {
       Alert.alert('Not Authenticated', 'You need to log in to chat.');
       return;
@@ -90,16 +88,17 @@ const ExpertChatScreen = () => {
       setMessages(messagesList);
       setLoadingMessages(false);
     }, (error) => {
-      Alert.alert('Error', 'Failed to load messages. Please try again later.');
+      console.error('Error fetching messages:', error);
       setLoadingMessages(false);
+      Alert.alert('Error', 'Failed to load messages.');
     });
 
     return () => unsubscribe();
   };
 
   const sendMessage = async () => {
-    if (message.trim() === '') {
-      Alert.alert('Empty Message', 'Please enter a message to send.');
+    if (message.trim() === '' && !image) {
+      Alert.alert('Empty Message', 'Please enter a message or select an image.');
       return;
     }
 
@@ -110,95 +109,79 @@ const ExpertChatScreen = () => {
 
     try {
       const messageData: Message = {
-        text: message.trim(),
+        text: message.trim() === '' ? undefined : message.trim(),
         timestamp: Timestamp.now(),
         sender: user.uid,
       };
 
+      if (image) {
+        const imageUrl = await uploadImage(image); // Upload the image and get the URL
+        messageData.imageUrl = imageUrl;
+      }
+
       await addDoc(collection(db, `chats/${chatId}/messages`), messageData);
       setMessage(''); // Clear the input field
+      setImage(null); // Clear the image URI
       Keyboard.dismiss(); // Dismiss the keyboard
     } catch (error) {
-      Alert.alert('Error', 'Failed to send message. Please try again.');
+      console.error('Error sending message:', error);
+      Alert.alert('Error', 'Failed to send message.');
     }
   };
 
-  const sendImage = async () => {
+  const handleImagePick = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permissionResult.granted === false) {
       Alert.alert('Permission to access camera roll is required!');
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync();
-    if (result.cancelled) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 1,
+    });
 
-    const imageData: Message = {
-      text: '', // Optional text field
-      timestamp: Timestamp.now(),
-      sender: user.uid,
-      imageUrl: result.uri, // Save the image URI
-    };
-
-    try {
-      await addDoc(collection(db, `chats/${chatId}/messages`), imageData);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to send image. Please try again.');
+    if (!result.canceled && result.assets) {
+      const imageUri = result.assets[0].uri;
+      setImage(imageUri);
     }
   };
 
-  const openImage = (uri: string) => {
-    setSelectedImage(uri);
-    setImageModalVisible(true);
+  const uploadImage = async (uri: string) => {
+    const blob = await fetch(uri).then((response) => response.blob());
+    const storageRef = ref(storage, `images/${Date.now()}_${user?.uid}.jpg`);
+    const uploadTask = uploadBytesResumable(storageRef, blob);
+
+    return new Promise<string>((resolve, reject) => {
+      uploadTask.on(
+        'state_changed',
+        () => {},
+        (error) => {
+          console.error('Image upload failed:', error);
+          reject('Error uploading image. Please try again.');
+        },
+        async () => {
+          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+          resolve(downloadUrl);
+        }
+      );
+    });
   };
-
-  const downloadImage = async (uri: string) => {
-    const fileUri = `${FileSystem.documentDirectory}${Date.now()}.jpg`; // Save the image with a timestamp to avoid naming conflicts
-    const downloadResumable = FileSystem.createDownloadResumable(
-      uri,
-      fileUri,
-      {},
-      {}
-    );
-
-    try {
-      const { uri: localUri } = await downloadResumable.downloadAsync();
-      Alert.alert('Image Downloaded', `Image saved to ${localUri}`);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to download image. Please try again.');
-    }
-  };
-
-  const renderFarmerCard = ({ item }: { item: User }) => (
-    <TouchableOpacity style={styles.farmerCard} onPress={() => handleFarmerSelect(item)}>
-      <Text style={styles.farmerName}>{item.name}</Text>
-    </TouchableOpacity>
-  );
 
   const renderMessagesList = () => (
-    <>
-      {loadingMessages ? (
-        <ActivityIndicator size="large" color="#0000ff" />
-      ) : (
-        <FlatList
-          data={messages}
-          keyExtractor={(item, index) => index.toString()}
-          renderItem={({ item }) => (
-            <View style={[styles.messageCard, item.sender === user?.uid ? styles.userMessage : styles.otherMessage]}>
-              {item.imageUrl && (
-                <TouchableOpacity onPress={() => openImage(item.imageUrl)}>
-                  <Image source={{ uri: item.imageUrl }} style={styles.image} />
-                </TouchableOpacity>
-              )}
-              {item.text ? <Text>{item.text}</Text> : null}
-              <Text style={styles.timestamp}>{item.timestamp.toDate().toLocaleString()}</Text>
-            </View>
-          )}
-          style={styles.messagesList}
-          contentContainerStyle={styles.messagesContainer}
-        />
+    <FlatList
+      data={messages}
+      keyExtractor={(item, index) => index.toString()}
+      renderItem={({ item }) => (
+        <View style={[styles.messageCard, item.sender === user?.uid ? styles.userMessage : styles.otherMessage]}>
+          {item.text ? <Text>{item.text}</Text> : null}
+          {item.imageUrl ? <Image source={{ uri: item.imageUrl }} style={styles.imageMessage} /> : null}
+          <Text style={styles.timestamp}>{item.timestamp.toDate().toLocaleString()}</Text>
+        </View>
       )}
-    </>
+      style={styles.messagesList}
+      contentContainerStyle={styles.messagesContainer}
+    />
   );
 
   return (
@@ -213,54 +196,33 @@ const ExpertChatScreen = () => {
             {renderMessagesList()}
             <View style={styles.inputContainer}>
               <TextInput
-                placeholder="Write your message here..."
+                placeholder="Write your message..."
                 value={message}
                 onChangeText={setMessage}
                 style={styles.input}
                 multiline={true}
-                numberOfLines={3}
               />
-              <TouchableOpacity onPress={sendImage}>
-                <Ionicons name="image" size={24} color="black" />
+              <TouchableOpacity onPress={sendMessage} style={styles.iconButton}>
+                <Ionicons name="send" size={24} color="#4CAF50" />
               </TouchableOpacity>
-              <TouchableOpacity onPress={sendMessage}>
-                <Ionicons name="send" size={24} color="black" />
+              <TouchableOpacity onPress={handleImagePick} style={styles.iconButton}>
+                <Ionicons name="image" size={24} color="#2196F3" />
               </TouchableOpacity>
             </View>
           </View>
         ) : (
-          <View style={styles.farmerListContainer}>
-            <Text style={styles.header}>Farmers</Text>
-            <FlatList
-              data={farmers}
-              keyExtractor={(item) => item.id}
-              renderItem={renderFarmerCard}
-              style={styles.farmerList}
-            />
-          </View>
-        )}
-
-        {/* Modal for viewing image */}
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={imageModalVisible}
-          onRequestClose={() => setImageModalVisible(false)}
-        >
-          <View style={styles.modalContainer}>
-            {selectedImage && (
-              <View style={styles.modalContent}>
-                <Image source={{ uri: selectedImage }} style={styles.modalImage} />
-                <Pressable style={styles.downloadButton} onPress={() => downloadImage(selectedImage)}>
-                  <Text style={styles.downloadButtonText}>Download Image</Text>
-                </Pressable>
-                <Pressable onPress={() => setImageModalVisible(false)}>
-                  <Text style={styles.closeButtonText}>Close</Text>
-                </Pressable>
-              </View>
+          <FlatList
+            data={farmers}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity style={styles.farmerCard} onPress={() => handleFarmerSelect(item)}>
+                <Text>{item.name}</Text>
+              </TouchableOpacity>
             )}
-          </View>
-        </Modal>
+            contentContainerStyle={styles.farmerListContainer}
+          />
+        )}
+        {loadingMessages && <ActivityIndicator size="large" color="#0000ff" />}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -269,103 +231,81 @@ const ExpertChatScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    backgroundColor: '#fff',
   },
   chatContainer: {
     flex: 1,
-  },
-  farmerListContainer: {
-    flex: 1,
-  },
-  header: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  farmerCard: {
-    padding: 15,
-    borderRadius: 5,
-    backgroundColor: '#e0e0e0',
-    marginBottom: 10,
-  },
-  farmerName: {
-    fontSize: 18,
-  },
-  messagesList: {
-    flex: 1,
-    marginBottom: 10,
-  },
-  messagesContainer: {
-    paddingBottom: 10,
-  },
-  messageCard: {
     padding: 10,
-    borderRadius: 5,
-    marginBottom: 10,
-  },
-  userMessage: {
-    backgroundColor: '#d1fcd1',
-    alignSelf: 'flex-end',
-  },
-  otherMessage: {
-    backgroundColor: '#f1f0f0',
-    alignSelf: 'flex-start',
-  },
-  timestamp: {
-    fontSize: 10,
-    color: '#666',
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    padding: 10,
+    backgroundColor: '#f0f0f0',
   },
   input: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    padding: 10,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    backgroundColor: '#fff',
     marginRight: 10,
   },
-  image: {
-    width: 200,
+  iconButton: {
+    padding: 10,
+  },
+  messagesList: {
+    flex: 1,
+  },
+  messagesContainer: {
+    paddingBottom: 20,
+  },
+  messageCard: {
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 10,
+    maxWidth: '80%',
+  },
+  userMessage: {
+    backgroundColor: '#DCF8C6',
+    alignSelf: 'flex-end',
+  },
+  otherMessage: {
+    backgroundColor: '#F1F0F0',
+    alignSelf: 'flex-start',
+  },
+  timestamp: {
+    fontSize: 10,
+    marginTop: 5,
+    color: '#555',
+  },
+  imageMessage: {
+    width: 150,
     height: 150,
-    marginBottom: 5,
+    borderRadius: 10,
+    marginTop: 5,
   },
   backButton: {
+    paddingVertical: 5,
+    paddingHorizontal: 10,
     marginBottom: 10,
   },
   backButtonText: {
+    color: '#007AFF',
     fontSize: 16,
-    color: 'blue',
   },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+  header: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
   },
-  modalContent: {
-    alignItems: 'center',
-  },
-  modalImage: {
-    width: 300,
-    height: 300,
+  farmerCard: {
+    padding: 20,
+    backgroundColor: '#f9f9f9',
+    marginBottom: 10,
     borderRadius: 10,
   },
-  downloadButton: {
-    marginTop: 10,
+  farmerListContainer: {
     padding: 10,
-    backgroundColor: 'blue',
-    borderRadius: 5,
-  },
-  downloadButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  closeButtonText: {
-    color: 'white',
-    marginTop: 10,
   },
 });
 
