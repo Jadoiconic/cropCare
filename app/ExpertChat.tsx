@@ -8,14 +8,19 @@ import {
   ActivityIndicator,
   SafeAreaView,
   TextInput,
-  Button,
   Alert,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
+  Image,
+  Modal,
+  Pressable,
 } from 'react-native';
-import { collection, query, onSnapshot, addDoc, Timestamp, orderBy, where, limit } from 'firebase/firestore';
-import { db, auth } from '@/services/config'; // Ensure your Firebase config is correct
+import { collection, query, onSnapshot, addDoc, Timestamp, orderBy, where } from 'firebase/firestore'; 
+import { db, auth } from '@/services/config'; 
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system'; // Import FileSystem for downloading images
+import { Ionicons } from '@expo/vector-icons';
 
 interface User {
   id: string;
@@ -26,23 +31,23 @@ interface Message {
   text: string;
   timestamp: Timestamp;
   sender: string;
+  imageUrl?: string;
 }
 
 const ExpertChatScreen = () => {
   const [farmers, setFarmers] = useState<User[]>([]);
-  const [conversations, setConversations] = useState<{ farmer: User; latestMessage: string }[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState<string>('');
   const [loadingMessages, setLoadingMessages] = useState<boolean>(true);
-  const [loadingConversations, setLoadingConversations] = useState<boolean>(true);
   const [showChat, setShowChat] = useState<boolean>(false);
   const [selectedFarmer, setSelectedFarmer] = useState<User | null>(null);
+  const [imageModalVisible, setImageModalVisible] = useState<boolean>(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const user = auth.currentUser;
   const [chatId, setChatId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchFarmers();
-    fetchConversations();
   }, []);
 
   const fetchFarmers = () => {
@@ -55,50 +60,6 @@ const ExpertChatScreen = () => {
       setFarmers(farmerList);
     }, (error) => {
       Alert.alert('Error', 'Failed to load farmers. Please try again later.');
-    });
-
-    return () => unsubscribe();
-  };
-
-  const fetchConversations = () => {
-    if (!user) return;
-
-    const conversationsQuery = query(collection(db, 'farmers'), where('role', '==', 'Farmer'));
-    const unsubscribe = onSnapshot(conversationsQuery, async (snapshot) => {
-      const conversationPromises = snapshot.docs.map(async (doc) => {
-        const farmer = { id: doc.id, ...doc.data() } as User;
-        const chatId = generateChatId(user.uid, farmer.id);
-
-        // Fetch the latest message from this chat
-        const latestMessageQuery = query(
-          collection(db, `chats/${chatId}/messages`),
-          orderBy('timestamp', 'desc'),
-          limit(1)
-        );
-
-        const latestMessageSnapshot = await new Promise((resolve) => {
-          onSnapshot(latestMessageQuery, (snapshot) => resolve(snapshot));
-        });
-
-        let latestMessage = 'No messages yet';
-
-        if (latestMessageSnapshot && !latestMessageSnapshot.empty) {
-          const messageDoc = latestMessageSnapshot.docs[0];
-          latestMessage = messageDoc.data()?.text || 'No messages yet'; // Safely access message data
-        }
-
-        return {
-          farmer,
-          latestMessage,
-        };
-      });
-
-      const fetchedConversations = await Promise.all(conversationPromises);
-      setConversations(fetchedConversations);
-      setLoadingConversations(false);
-    }, (error) => {
-      Alert.alert('Error', 'Failed to load conversations. Please try again later.');
-      setLoadingConversations(false);
     });
 
     return () => unsubscribe();
@@ -154,9 +115,7 @@ const ExpertChatScreen = () => {
         sender: user.uid,
       };
 
-      // Send the message to the messages subcollection
       await addDoc(collection(db, `chats/${chatId}/messages`), messageData);
-
       setMessage(''); // Clear the input field
       Keyboard.dismiss(); // Dismiss the keyboard
     } catch (error) {
@@ -164,10 +123,55 @@ const ExpertChatScreen = () => {
     }
   };
 
-  const renderFarmerCard = ({ item }: { item: { farmer: User; latestMessage: string } }) => (
-    <TouchableOpacity style={styles.farmerCard} onPress={() => handleFarmerSelect(item.farmer)}>
-      <Text style={styles.farmerName}>{item.farmer.name}</Text>
-      <Text style={styles.latestMessage}>{item.latestMessage}</Text>
+  const sendImage = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.granted === false) {
+      Alert.alert('Permission to access camera roll is required!');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync();
+    if (result.cancelled) return;
+
+    const imageData: Message = {
+      text: '', // Optional text field
+      timestamp: Timestamp.now(),
+      sender: user.uid,
+      imageUrl: result.uri, // Save the image URI
+    };
+
+    try {
+      await addDoc(collection(db, `chats/${chatId}/messages`), imageData);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to send image. Please try again.');
+    }
+  };
+
+  const openImage = (uri: string) => {
+    setSelectedImage(uri);
+    setImageModalVisible(true);
+  };
+
+  const downloadImage = async (uri: string) => {
+    const fileUri = `${FileSystem.documentDirectory}${Date.now()}.jpg`; // Save the image with a timestamp to avoid naming conflicts
+    const downloadResumable = FileSystem.createDownloadResumable(
+      uri,
+      fileUri,
+      {},
+      {}
+    );
+
+    try {
+      const { uri: localUri } = await downloadResumable.downloadAsync();
+      Alert.alert('Image Downloaded', `Image saved to ${localUri}`);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to download image. Please try again.');
+    }
+  };
+
+  const renderFarmerCard = ({ item }: { item: User }) => (
+    <TouchableOpacity style={styles.farmerCard} onPress={() => handleFarmerSelect(item)}>
+      <Text style={styles.farmerName}>{item.name}</Text>
     </TouchableOpacity>
   );
 
@@ -177,11 +181,16 @@ const ExpertChatScreen = () => {
         <ActivityIndicator size="large" color="#0000ff" />
       ) : (
         <FlatList
-          data={messages.sort((a, b) => a.timestamp.toMillis() - b.timestamp.toMillis())} // Sort messages by timestamp
+          data={messages}
           keyExtractor={(item, index) => index.toString()}
           renderItem={({ item }) => (
             <View style={[styles.messageCard, item.sender === user?.uid ? styles.userMessage : styles.otherMessage]}>
-              <Text>{item.text}</Text>
+              {item.imageUrl && (
+                <TouchableOpacity onPress={() => openImage(item.imageUrl)}>
+                  <Image source={{ uri: item.imageUrl }} style={styles.image} />
+                </TouchableOpacity>
+              )}
+              {item.text ? <Text>{item.text}</Text> : null}
               <Text style={styles.timestamp}>{item.timestamp.toDate().toLocaleString()}</Text>
             </View>
           )}
@@ -211,22 +220,47 @@ const ExpertChatScreen = () => {
                 multiline={true}
                 numberOfLines={3}
               />
-              <Button title="Send" onPress={sendMessage} />
+              <TouchableOpacity onPress={sendImage}>
+                <Ionicons name="image" size={24} color="black" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={sendMessage}>
+                <Ionicons name="send" size={24} color="black" />
+              </TouchableOpacity>
             </View>
           </View>
         ) : (
           <View style={styles.farmerListContainer}>
-            {loadingConversations ? (
-              <ActivityIndicator size="large" color="#0000ff" />
-            ) : (
-              <FlatList
-                data={conversations}
-                keyExtractor={(item, index) => index.toString()}
-                renderItem={renderFarmerCard}
-              />
-            )}
+            <Text style={styles.header}>Farmers</Text>
+            <FlatList
+              data={farmers}
+              keyExtractor={(item) => item.id}
+              renderItem={renderFarmerCard}
+              style={styles.farmerList}
+            />
           </View>
         )}
+
+        {/* Modal for viewing image */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={imageModalVisible}
+          onRequestClose={() => setImageModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            {selectedImage && (
+              <View style={styles.modalContent}>
+                <Image source={{ uri: selectedImage }} style={styles.modalImage} />
+                <Pressable style={styles.downloadButton} onPress={() => downloadImage(selectedImage)}>
+                  <Text style={styles.downloadButtonText}>Download Image</Text>
+                </Pressable>
+                <Pressable onPress={() => setImageModalVisible(false)}>
+                  <Text style={styles.closeButtonText}>Close</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+        </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -235,15 +269,51 @@ const ExpertChatScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 10,
+    padding: 20,
   },
   chatContainer: {
     flex: 1,
   },
+  farmerListContainer: {
+    flex: 1,
+  },
   header: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
-    marginVertical: 10,
+    marginBottom: 10,
+  },
+  farmerCard: {
+    padding: 15,
+    borderRadius: 5,
+    backgroundColor: '#e0e0e0',
+    marginBottom: 10,
+  },
+  farmerName: {
+    fontSize: 18,
+  },
+  messagesList: {
+    flex: 1,
+    marginBottom: 10,
+  },
+  messagesContainer: {
+    paddingBottom: 10,
+  },
+  messageCard: {
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 10,
+  },
+  userMessage: {
+    backgroundColor: '#d1fcd1',
+    alignSelf: 'flex-end',
+  },
+  otherMessage: {
+    backgroundColor: '#f1f0f0',
+    alignSelf: 'flex-start',
+  },
+  timestamp: {
+    fontSize: 10,
+    color: '#666',
   },
   inputContainer: {
     flexDirection: 'row',
@@ -257,52 +327,45 @@ const styles = StyleSheet.create({
     padding: 10,
     marginRight: 10,
   },
-  messageCard: {
-    padding: 10,
-    borderRadius: 5,
-    marginVertical: 5,
-    maxWidth: '80%',
-  },
-  userMessage: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#4CAF50',
-    color: '#fff',
-  },
-  otherMessage: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#f1f1f1',
-  },
-  timestamp: {
-    fontSize: 10,
-    color: '#888',
-  },
-  messagesList: {
-    flex: 1,
-  },
-  messagesContainer: {
-    paddingBottom: 20,
-  },
-  farmerListContainer: {
-    flex: 1,
+  image: {
+    width: 200,
+    height: 150,
+    marginBottom: 5,
   },
   backButton: {
     marginBottom: 10,
   },
   backButtonText: {
     fontSize: 16,
-    color: '#007BFF',
+    color: 'blue',
   },
-  farmerCard: {
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+  },
+  modalContent: {
+    alignItems: 'center',
+  },
+  modalImage: {
+    width: 300,
+    height: 300,
+    borderRadius: 10,
+  },
+  downloadButton: {
+    marginTop: 10,
     padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
+    backgroundColor: 'blue',
+    borderRadius: 5,
   },
-  farmerName: {
-    fontSize: 16,
+  downloadButtonText: {
+    color: 'white',
     fontWeight: 'bold',
   },
-  latestMessage: {
-    color: '#666',
+  closeButtonText: {
+    color: 'white',
+    marginTop: 10,
   },
 });
 

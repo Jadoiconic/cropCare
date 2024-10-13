@@ -8,14 +8,17 @@ import {
   ActivityIndicator,
   SafeAreaView,
   TextInput,
-  Button,
   Alert,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
-import { collection, query, onSnapshot, addDoc, Timestamp, orderBy, where } from 'firebase/firestore'; // Ensure 'where' is imported
-import { db, auth } from '@/services/config'; // Ensure your Firebase config is correct
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
+import { collection, query, onSnapshot, addDoc, Timestamp, orderBy, where } from 'firebase/firestore'; 
+import { db, auth } from '@/services/config'; 
+import { Ionicons } from '@expo/vector-icons'; // Import Ionicons
 
 interface User {
   id: string;
@@ -23,7 +26,8 @@ interface User {
 }
 
 interface Message {
-  text: string;
+  text?: string; // text can be undefined for image messages
+  imageUrl?: string; // URL of the image
   timestamp: Timestamp;
   sender: string;
 }
@@ -38,12 +42,13 @@ const FarmerChatScreen = () => {
   const user = auth.currentUser;
   const [chatId, setChatId] = useState<string | null>(null);
 
+  // Fetch experts on component mount
   useEffect(() => {
     fetchExperts();
   }, []);
 
   const fetchExperts = () => {
-    const expertsQuery = query(collection(db, 'farmers'), where('role', '==', 'Expert')); // Fetch experts with the role 'Expert'
+    const expertsQuery = query(collection(db, 'farmers'), where('role', '==', 'Expert'));
     const unsubscribe = onSnapshot(expertsQuery, (snapshot) => {
       const expertList = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -51,6 +56,7 @@ const FarmerChatScreen = () => {
       })) as User[];
       setExperts(expertList);
     }, (error) => {
+      console.error('Error fetching experts:', error);
       Alert.alert('Error', 'Failed to load experts. Please try again later.');
     });
 
@@ -59,6 +65,7 @@ const FarmerChatScreen = () => {
 
   const handleExpertSelect = (expert: User) => {
     if (!user) {
+      console.log('User not authenticated.');
       Alert.alert('Not Authenticated', 'You need to log in to chat.');
       return;
     }
@@ -79,9 +86,11 @@ const FarmerChatScreen = () => {
     const messagesQuery = query(collection(db, `chats/${chatId}/messages`), orderBy('timestamp', 'asc'));
     const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
       const messagesList = snapshot.docs.map((doc) => doc.data() as Message);
+      console.log('Fetched Messages:', messagesList);
       setMessages(messagesList);
       setLoadingMessages(false);
     }, (error) => {
+      console.error('Error fetching messages:', error);
       Alert.alert('Error', 'Failed to load messages. Please try again later.');
       setLoadingMessages(false);
     });
@@ -90,8 +99,8 @@ const FarmerChatScreen = () => {
   };
 
   const sendMessage = async () => {
-    if (message.trim() === '') {
-      Alert.alert('Empty Message', 'Please enter a message to send.');
+    if (message.trim() === '' && !image) {
+      Alert.alert('Empty Message', 'Please enter a message or select an image to send.');
       return;
     }
 
@@ -102,19 +111,56 @@ const FarmerChatScreen = () => {
 
     try {
       const messageData: Message = {
-        text: message.trim(),
+        text: message.trim() === '' ? undefined : message.trim(),
         timestamp: Timestamp.now(),
         sender: user.uid,
       };
 
-      // Send the message to the messages subcollection
       await addDoc(collection(db, `chats/${chatId}/messages`), messageData);
-
       setMessage(''); // Clear the input field
       Keyboard.dismiss(); // Dismiss the keyboard
     } catch (error) {
+      console.error('Error sending message:', error);
       Alert.alert('Error', 'Failed to send message. Please try again.');
     }
+  };
+
+  const handleImagePick = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.granted === false) {
+      Alert.alert('Permission to access camera roll is required!');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (!result.canceled && result.assets) {
+      const imageUri = result.assets[0].uri;
+      console.log('Picked Image URI:', imageUri);
+      await uploadImage(imageUri);
+    }
+  };
+
+  const uploadImage = async (uri: string) => {
+    const fileName = uri.split('/').pop();
+    const newPath = `${FileSystem.documentDirectory}${fileName}`;
+
+    await FileSystem.moveAsync({
+      from: uri,
+      to: newPath,
+    });
+
+    const messageData: Message = {
+      imageUrl: newPath,
+      timestamp: Timestamp.now(),
+      sender: user?.uid,
+    };
+
+    await addDoc(collection(db, `chats/${chatId}/messages`), messageData);
   };
 
   const renderExpertCard = ({ item }: { item: User }) => (
@@ -129,11 +175,15 @@ const FarmerChatScreen = () => {
         <ActivityIndicator size="large" color="#0000ff" />
       ) : (
         <FlatList
-          data={messages} // Keep the messages in normal order (oldest at the top, newest at the bottom)
+          data={messages} 
           keyExtractor={(item, index) => index.toString()}
           renderItem={({ item }) => (
             <View style={[styles.messageCard, item.sender === user?.uid ? styles.userMessage : styles.otherMessage]}>
-              <Text>{item.text}</Text>
+              {item.text ? (
+                <Text>{item.text}</Text>
+              ) : item.imageUrl ? (
+                <Image source={{ uri: item.imageUrl }} style={styles.imageMessage} />
+              ) : null}
               <Text style={styles.timestamp}>{item.timestamp.toDate().toLocaleString()}</Text>
             </View>
           )}
@@ -163,7 +213,12 @@ const FarmerChatScreen = () => {
                 multiline={true}
                 numberOfLines={3}
               />
-              <Button title="Send" onPress={sendMessage} color="#4CAF50" />
+              <TouchableOpacity onPress={sendMessage} style={styles.iconButton}>
+                <Ionicons name="send" size={24} color="#4CAF50" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleImagePick} style={styles.iconButton}>
+                <Ionicons name="image" size={24} color="#2196F3" />
+              </TouchableOpacity>
             </View>
           </View>
         ) : (
@@ -227,29 +282,41 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   messageCard: {
-    borderRadius: 10,
     padding: 10,
-    marginVertical: 5,
+    borderRadius: 10,
+    marginBottom: 10,
+    maxWidth: '80%',
   },
   userMessage: {
+    backgroundColor: '#d1ffd1',
     alignSelf: 'flex-end',
-    backgroundColor: '#4CAF50',
-    color: '#fff',
   },
   otherMessage: {
+    backgroundColor: '#f0f0f0',
     alignSelf: 'flex-start',
-    backgroundColor: '#f1f1f1',
   },
   timestamp: {
     fontSize: 10,
     color: '#888',
     marginTop: 5,
   },
+  imageMessage: {
+    width: 200,
+    height: 200,
+    borderRadius: 10,
+  },
   backButton: {
     marginBottom: 10,
   },
   backButtonText: {
-    color: '#007BFF',
+    color: '#2196F3',
+    fontSize: 16,
+  },
+  iconButton: {
+    marginLeft: 10,
+    padding: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   expertListContainer: {
     flex: 1,
