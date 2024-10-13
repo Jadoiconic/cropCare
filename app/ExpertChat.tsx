@@ -177,7 +177,7 @@ const ExpertChatScreen = () => {
         <ActivityIndicator size="large" color="#0000ff" />
       ) : (
         <FlatList
-          data={messages}
+          data={messages.sort((a, b) => a.timestamp.toMillis() - b.timestamp.toMillis())} // Sort messages by timestamp
           keyExtractor={(item, index) => index.toString()}
           renderItem={({ item }) => (
             <View style={[styles.messageCard, item.sender === user?.uid ? styles.userMessage : styles.otherMessage]}>
@@ -187,7 +187,6 @@ const ExpertChatScreen = () => {
           )}
           style={styles.messagesList}
           contentContainerStyle={styles.messagesContainer}
-          inverted
         />
       )}
     </>
@@ -212,20 +211,18 @@ const ExpertChatScreen = () => {
                 multiline={true}
                 numberOfLines={3}
               />
-              <Button title="Send" onPress={sendMessage} color="#4CAF50" />
+              <Button title="Send" onPress={sendMessage} />
             </View>
           </View>
         ) : (
           <View style={styles.farmerListContainer}>
-            <Text style={styles.header}>Your Conversations</Text>
             {loadingConversations ? (
               <ActivityIndicator size="large" color="#0000ff" />
             ) : (
               <FlatList
                 data={conversations}
-                keyExtractor={(item) => item.farmer.id}
+                keyExtractor={(item, index) => index.toString()}
                 renderItem={renderFarmerCard}
-                style={styles.farmerList}
               />
             )}
           </View>
@@ -238,36 +235,19 @@ const ExpertChatScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#ffffff',
-  },
-  farmerCard: {
-    padding: 15,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 10,
-    marginBottom: 10,
-  },
-  farmerName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  latestMessage: {
-    fontSize: 14,
-    color: '#777',
+    padding: 10,
   },
   chatContainer: {
     flex: 1,
   },
   header: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginVertical: 10,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
   },
   input: {
     flex: 1,
@@ -311,6 +291,18 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     color: '#007BFF',
+  },
+  farmerCard: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+  },
+  farmerName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  latestMessage: {
+    color: '#666',
   },
 });
 
