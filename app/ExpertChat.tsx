@@ -10,15 +10,14 @@ import {
   TextInput,
   Alert,
   Keyboard,
-  KeyboardAvoidingView,
-  Platform,
   Image,
+  Modal,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { collection, query, onSnapshot, addDoc, Timestamp, orderBy, where } from 'firebase/firestore'; 
-import { db, auth, storage } from '@/services/config'; // Firebase configuration file
-import { Ionicons } from '@expo/vector-icons'; // Icons from Ionicons
-import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage'; // For Firebase Storage
+import { db, auth, storage } from '@/services/config';
+import { Ionicons } from '@expo/vector-icons';
+import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 
 interface Farmer {
   id: string;
@@ -39,9 +38,12 @@ const ExpertChatScreen = () => {
   const [loadingMessages, setLoadingMessages] = useState<boolean>(true);
   const [showChat, setShowChat] = useState<boolean>(false);
   const [selectedFarmer, setSelectedFarmer] = useState<Farmer | null>(null);
-  const [image, setImage] = useState<string | null>(null); // To hold the image URI
+  const [image, setImage] = useState<string | null>(null);
   const user = auth.currentUser;
   const [chatId, setChatId] = useState<string | null>(null);
+  const [sendingMessage, setSendingMessage] = useState<boolean>(false);
+  const [modalVisible, setModalVisible] = useState<boolean>(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
     fetchFarmers();
@@ -97,7 +99,7 @@ const ExpertChatScreen = () => {
   };
 
   const sendMessage = async () => {
-    if (message.trim() === '' && !image) {
+    if (!message && !image) {
       Alert.alert('Empty Message', 'Please enter a message or select an image.');
       return;
     }
@@ -107,32 +109,36 @@ const ExpertChatScreen = () => {
       return;
     }
 
+    setSendingMessage(true);
+
     try {
       const messageData: Message = {
-        text: message.trim() === '' ? undefined : message.trim(),
+        text: message ? message.trim() : undefined,
         timestamp: Timestamp.now(),
         sender: user.uid,
       };
 
       if (image) {
-        const imageUrl = await uploadImage(image); // Upload the image and get the URL
+        const imageUrl = await uploadImage(image);
         messageData.imageUrl = imageUrl;
       }
 
       await addDoc(collection(db, `chats/${chatId}/messages`), messageData);
-      setMessage(''); // Clear the input field
-      setImage(null); // Clear the image URI
-      Keyboard.dismiss(); // Dismiss the keyboard
+      setMessage('');
+      setImage(null);
+      Keyboard.dismiss();
     } catch (error) {
       console.error('Error sending message:', error);
       Alert.alert('Error', 'Failed to send message.');
+    } finally {
+      setSendingMessage(false);
     }
   };
 
   const handleImagePick = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (permissionResult.granted === false) {
-      Alert.alert('Permission to access camera roll is required!');
+    if (!permissionResult.granted) {
+      Alert.alert('Permission required', 'Permission to access camera roll is required!');
       return;
     }
 
@@ -168,6 +174,12 @@ const ExpertChatScreen = () => {
     });
   };
 
+  // Function to open image in full-screen modal
+  const handleImagePress = (imageUrl: string) => {
+    setSelectedImage(imageUrl);
+    setModalVisible(true);
+  };
+
   const renderMessagesList = () => (
     <FlatList
       data={messages}
@@ -175,8 +187,12 @@ const ExpertChatScreen = () => {
       renderItem={({ item }) => (
         <View style={[styles.messageCard, item.sender === user?.uid ? styles.userMessage : styles.otherMessage]}>
           {item.text ? <Text>{item.text}</Text> : null}
-          {item.imageUrl ? <Image source={{ uri: item.imageUrl }} style={styles.imageMessage} /> : null}
-          <Text style={styles.timestamp}>{item.timestamp.toDate().toLocaleString()}</Text>
+          {item.imageUrl ? (
+            <TouchableOpacity onPress={() => handleImagePress(item.imageUrl)}>
+              <Image source={{ uri: item.imageUrl }} style={styles.imageMessage} />
+            </TouchableOpacity>
+          ) : null}
+          <Text style={styles.timestamp}>{formatTimestamp(item.timestamp)}</Text>
         </View>
       )}
       style={styles.messagesList}
@@ -184,46 +200,67 @@ const ExpertChatScreen = () => {
     />
   );
 
+  const formatTimestamp = (timestamp: Timestamp): string => {
+    const date = timestamp.toDate();
+    return date.toLocaleString();
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
-        {showChat ? (
-          <View style={styles.chatContainer}>
-            <TouchableOpacity onPress={() => setShowChat(false)} style={styles.backButton}>
-              <Text style={styles.backButtonText}>Back</Text>
+      {showChat ? (
+        <View style={styles.chatContainer}>
+          <TouchableOpacity onPress={() => setShowChat(false)} style={styles.backButton}>
+            <Text style={styles.backButtonText}>Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.header}>Chat with {selectedFarmer?.name}</Text>
+          {renderMessagesList()}
+          {loadingMessages && <ActivityIndicator size="large" color="#0000ff" />}
+          <View style={styles.inputContainer}>
+            <TextInput
+              placeholder="Write your message..."
+              value={message}
+              onChangeText={setMessage}
+              style={styles.input}
+              multiline={true}
+            />
+            <TouchableOpacity
+              onPress={handleImagePick}
+              style={styles.iconButton}
+            >
+              <Ionicons name="image" size={24} color={image ? '#4CAF50' : '#2196F3'} />
             </TouchableOpacity>
-            <Text style={styles.header}>Chat with {selectedFarmer?.name}</Text>
-            {renderMessagesList()}
-            <View style={styles.inputContainer}>
-              <TextInput
-                placeholder="Write your message..."
-                value={message}
-                onChangeText={setMessage}
-                style={styles.input}
-                multiline={true}
-              />
-              <TouchableOpacity onPress={sendMessage} style={styles.iconButton}>
-                <Ionicons name="send" size={24} color="#4CAF50" />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleImagePick} style={styles.iconButton}>
-                <Ionicons name="image" size={24} color="#2196F3" />
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              onPress={sendMessage}
+              style={styles.iconButton}
+              disabled={sendingMessage || (!message && !image)}
+            >
+              <Ionicons name="send" size={24} color={sendingMessage || (!message && !image) ? '#ccc' : '#4CAF50'} />
+            </TouchableOpacity>
           </View>
-        ) : (
-          <FlatList
-            data={farmers}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <TouchableOpacity style={styles.farmerCard} onPress={() => handleFarmerSelect(item)}>
-                <Text>{item.name}</Text>
-              </TouchableOpacity>
-            )}
-            contentContainerStyle={styles.farmerListContainer}
-          />
-        )}
-        {loadingMessages && <ActivityIndicator size="large" color="#0000ff" />}
-      </KeyboardAvoidingView>
+          {image && <Image source={{ uri: image }} style={styles.previewImage} />}
+        </View>
+      ) : (
+        <FlatList
+          data={farmers}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity style={styles.farmerCard} onPress={() => handleFarmerSelect(item)}>
+              <Text>{item.name}</Text>
+            </TouchableOpacity>
+          )}
+          contentContainerStyle={styles.farmerListContainer}
+        />
+      )}
+
+      {/* Modal for full-screen image */}
+      <Modal visible={modalVisible} transparent={true}>
+        <View style={styles.modalContainer}>
+          <Image source={{ uri: selectedImage }} style={styles.fullScreenImage} />
+          <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
+            <Text style={styles.closeButtonText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -231,82 +268,128 @@ const ExpertChatScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff', // Set a white background for the entire screen
   },
   chatContainer: {
     flex: 1,
-    padding: 10,
+    padding: 10, // Add padding to the chat container
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 10,
-    backgroundColor: '#f0f0f0',
+    borderTopWidth: 1,
+    borderTopColor: '#ccc', // Add a top border for better separation
   },
   input: {
     flex: 1,
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    backgroundColor: '#fff',
-    marginRight: 10,
+    backgroundColor: '#f2f2f2',
+    padding: 10,
+    borderRadius: 25, // Make the input field more rounded
+    maxHeight: 100,
+    borderColor: '#ddd', // Light border for input
+    borderWidth: 1,
+    fontSize: 16, // Increase font size for better readability
   },
   iconButton: {
+    marginLeft: 10,
+    padding: 10, // Add padding around icon buttons
+    borderRadius: 25, // Make icon buttons rounded
+    backgroundColor: '#e1e1e1', // Light gray background for buttons
+  },
+  messageCard: {
     padding: 10,
+    marginBottom: 10,
+    borderRadius: 15, // More rounded corners for message bubbles
+    maxWidth: '80%',
+    shadowColor: '#000', // Adding shadow for depth
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3, // For Android shadow
+  },
+  userMessage: {
+    backgroundColor: '#d1ffd1', // Lighter green for user messages
+    alignSelf: 'flex-end',
+  },
+  otherMessage: {
+    backgroundColor: '#f2f2f2',
+    alignSelf: 'flex-start',
+  },
+  imageMessage: {
+    width: 200,
+    height: 200,
+    borderRadius: 15, // More rounded corners for image messages
+    marginVertical: 5, // Add space around images
+  },
+  timestamp: {
+    fontSize: 10,
+    color: '#888',
+    marginTop: 5,
+    alignSelf: 'flex-end', // Align timestamp to the right
   },
   messagesList: {
     flex: 1,
   },
   messagesContainer: {
-    paddingBottom: 20,
-  },
-  messageCard: {
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 10,
-    maxWidth: '80%',
-  },
-  userMessage: {
-    backgroundColor: '#DCF8C6',
-    alignSelf: 'flex-end',
-  },
-  otherMessage: {
-    backgroundColor: '#F1F0F0',
-    alignSelf: 'flex-start',
-  },
-  timestamp: {
-    fontSize: 10,
-    marginTop: 5,
-    color: '#555',
-  },
-  imageMessage: {
-    width: 150,
-    height: 150,
-    borderRadius: 10,
-    marginTop: 5,
+    paddingVertical: 10,
   },
   backButton: {
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    marginBottom: 10,
+    padding: 10,
+    backgroundColor: '#007AFF', // Background color for back button
+    borderRadius: 5, // Rounded corners
+    alignItems: 'center', // Center the text
   },
   backButtonText: {
-    color: '#007AFF',
-    fontSize: 16,
-  },
-  header: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
+    color: '#ffffff', // White text for contrast
+    fontWeight: 'bold', // Bold text for emphasis
   },
   farmerCard: {
     padding: 20,
     backgroundColor: '#f9f9f9',
-    marginBottom: 10,
-    borderRadius: 10,
+    borderBottomWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5, // Rounded corners for farmer cards
   },
   farmerListContainer: {
+    paddingBottom: 10,
+  },
+  header: {
+    fontSize: 20, // Larger font size for header
+    fontWeight: 'bold',
+    marginVertical: 10,
+    textAlign: 'center', // Centered header
+  },
+  previewImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 10,
+    marginTop: 10,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullScreenImage: {
+    width: '90%',
+    height: '80%',
+    borderRadius: 10,
+  },
+  closeButton: {
     padding: 10,
+    backgroundColor: '#007AFF',
+    marginTop: 20,
+    borderRadius: 5, // Rounded corners for close button
+  },
+  closeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold', // Bold text for close button
   },
 });
+
+
 
 export default ExpertChatScreen;
