@@ -14,8 +14,20 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { collection, query, onSnapshot, addDoc, Timestamp, orderBy, where, getDocs, doc, setDoc } from 'firebase/firestore';
-import { db, auth } from '@/services/config'; // Make sure Firebase config is properly set up
+import { 
+  collection, 
+  query, 
+  onSnapshot, 
+  addDoc, 
+  Timestamp, 
+  orderBy, 
+  where, 
+  doc, 
+  getDoc, 
+  setDoc, 
+  limit
+} from 'firebase/firestore';
+import { db, auth } from '@/services/config'; // Ensure your Firebase config is correct
 
 interface User {
   id: string;
@@ -28,6 +40,12 @@ interface Message {
   sender: string;
 }
 
+interface Conversation {
+  id: string;
+  farmerName: string;
+  latestMessage: string;
+}
+
 const CombinedChatScreen = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -37,10 +55,9 @@ const CombinedChatScreen = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [loadingUsers, setLoadingUsers] = useState<boolean>(true);
   const [isExpert, setIsExpert] = useState<boolean>(false);
-  const [conversations, setConversations] = useState<User[]>([]);
-  const [chatId, setChatId] = useState<string | null>(null);
-
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const user = auth.currentUser;
+  const [chatId, setChatId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchRole = async () => {
@@ -58,11 +75,11 @@ const CombinedChatScreen = () => {
 
     fetchRole();
     fetchUsers();
-  }, [isExpert]);
+  }, []);
 
   const fetchUsers = () => {
     if (isExpert) {
-      fetchConversations();
+      fetchConversationsWithLatestMessage();
     } else {
       const usersQuery = query(collection(db, 'farmers'), where('role', '==', 'Expert'));
       const unsubscribe = onSnapshot(usersQuery, (snapshot) => {
@@ -81,14 +98,28 @@ const CombinedChatScreen = () => {
     }
   };
 
-  const fetchConversations = () => {
+  const fetchConversationsWithLatestMessage = () => {
     const conversationQuery = query(collection(db, 'chats'), where('expertId', '==', auth.currentUser?.uid));
     const unsubscribe = onSnapshot(conversationQuery, async (snapshot) => {
       const conversationList = await Promise.all(
         snapshot.docs.map(async (doc) => {
           const { farmerId } = doc.data();
-          const farmerDoc = await doc(db, 'farmers', farmerId).get();
-          return { id: farmerDoc.id, ...farmerDoc.data() } as User;
+          const farmerDoc = await getDoc(doc(db, 'farmers', farmerId));
+          const farmerName = farmerDoc.data()?.name || 'Unknown Farmer';
+
+          // Get the latest message from this chat
+          const messagesRef = collection(db, `chats/${doc.id}/messages`);
+          const latestMessageQuery = query(messagesRef, orderBy('timestamp', 'desc'), limit(1));
+          const latestMessageSnapshot = await getDoc(latestMessageQuery);
+          const latestMessage = latestMessageSnapshot.exists()
+            ? latestMessageSnapshot.data()?.text || 'No messages yet'
+            : 'No messages yet';
+
+          return {
+            id: farmerDoc.id,
+            farmerName,
+            latestMessage,
+          };
         })
       );
       setConversations(conversationList);
@@ -151,11 +182,13 @@ const CombinedChatScreen = () => {
         sender: user.uid,
       };
 
-      // Check if the chat document exists
+      // Reference to the chat document
       const chatDocRef = doc(db, 'chats', chatId);
-      const chatDocSnapshot = await getDocs(query(chatDocRef));
 
-      if (chatDocSnapshot.empty) {
+      // Check if the chat document exists
+      const chatDocSnapshot = await getDoc(chatDocRef);
+
+      if (!chatDocSnapshot.exists()) {
         // Create chat document if it doesn't exist
         await setDoc(chatDocRef, {
           chatId: chatId,
@@ -165,11 +198,11 @@ const CombinedChatScreen = () => {
         });
       }
 
-      // Add message to Firestore
+      // Add the message to Firestore
       await addDoc(collection(db, `chats/${chatId}/messages`), messageData);
       console.log('Message sent:', messageData);
 
-      setMessage('');
+      setMessage(''); // Clear the input field after sending
       Keyboard.dismiss();
     } catch (error) {
       console.error('Error sending message:', error);
@@ -177,9 +210,10 @@ const CombinedChatScreen = () => {
     }
   };
 
-  const renderUserCard = ({ item }: { item: User }) => (
+  const renderConversationCard = ({ item }: { item: Conversation }) => (
     <TouchableOpacity style={styles.userCard} onPress={() => handleUserSelect(item)}>
-      <Text style={styles.userName}>{item.name}</Text>
+      <Text style={styles.userName}>{item.farmerName}</Text>
+      <Text style={styles.latestMessage}>{item.latestMessage}</Text>
     </TouchableOpacity>
   );
 
@@ -228,17 +262,15 @@ const CombinedChatScreen = () => {
             </View>
           </View>
         ) : (
-          <View style={styles.userListContainer}>
-            <Text style={styles.header}>
-              {isExpert ? 'Your Conversations' : 'Available Experts'}
-            </Text>
+          <View style={styles.conversationContainer}>
+            <Text style={styles.header}>Your Conversations</Text>
             {loadingUsers ? (
               <ActivityIndicator size="large" color="#0000ff" />
             ) : (
               <FlatList
-                data={isExpert ? conversations : users}
+                data={conversations}
                 keyExtractor={(item) => item.id}
-                renderItem={renderUserCard}
+                renderItem={renderConversationCard}
                 style={styles.userList}
               />
             )}
@@ -252,27 +284,36 @@ const CombinedChatScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 10,
-  },
-  userCard: {
-    padding: 15,
-    borderRadius: 10,
-    marginVertical: 5,
-  },
-  userName: {
-    fontSize: 18,
+    backgroundColor: '#fff',
   },
   chatContainer: {
     flex: 1,
+    padding: 16,
   },
-  backButton: {
+  conversationContainer: {
+    flex: 1,
+    padding: 16,
+  },
+  userCard: {
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: '#f9f9f9',
     marginBottom: 10,
+    borderColor: '#ddd',
+    borderWidth: 1,
   },
-  backButtonText: {
-    color: '#007BFF',
+  userName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  latestMessage: {
+    fontSize: 14,
+    color: '#888',
+    marginTop: 5,
   },
   header: {
-    fontSize: 22,
+    fontSize: 20,
+    fontWeight: 'bold',
     marginBottom: 10,
   },
   inputContainer: {
@@ -282,40 +323,39 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    padding: 10,
+    borderColor: '#ccc',
     borderWidth: 1,
     borderRadius: 8,
+    padding: 10,
     marginRight: 10,
   },
-  messagesList: {
-    flex: 1,
+  backButton: {
+    marginBottom: 20,
   },
-  messagesContainer: {
-    paddingBottom: 20,
+  backButtonText: {
+    color: '#0000ff',
+    fontSize: 16,
   },
   messageCard: {
     padding: 10,
-    borderRadius: 5,
+    borderRadius: 10,
     marginVertical: 5,
-    maxWidth: '75%',
+    alignSelf: 'flex-start',
   },
   userMessage: {
-    alignSelf: 'flex-end',
     backgroundColor: '#DCF8C6',
+    alignSelf: 'flex-end',
   },
   otherMessage: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#E5E5EA',
   },
   timestamp: {
     fontSize: 10,
-    color: '#808080',
+    color: '#666',
+    marginTop: 5,
   },
   userList: {
-    flex: 1,
-  },
-  userListContainer: {
-    flex: 1,
+    marginTop: 10,
   },
 });
 

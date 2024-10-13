@@ -51,7 +51,7 @@ const HomeScreen = () => { // Renamed to uppercase
                 </View>
                 <View style={styles.row}>
                     <TouchableOpacity
-                        onPress={() => router.push("/home/Chats")} // Changed to push
+                        onPress={() => router.push("/ExpertChat")} // Changed to push
                         style={styles.cardContainer}
                         accessibilityLabel="Navigate to Chat Screen"
                     >

@@ -14,7 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { collection, query, onSnapshot, addDoc, Timestamp, orderBy, where } from 'firebase/firestore';
+import { collection, query, onSnapshot, addDoc, Timestamp, orderBy, where, limit } from 'firebase/firestore';
 import { db, auth } from '@/services/config'; // Ensure your Firebase config is correct
 
 interface User {
@@ -30,9 +30,11 @@ interface Message {
 
 const ExpertChatScreen = () => {
   const [farmers, setFarmers] = useState<User[]>([]);
+  const [conversations, setConversations] = useState<{ farmer: User; latestMessage: string }[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState<string>('');
   const [loadingMessages, setLoadingMessages] = useState<boolean>(true);
+  const [loadingConversations, setLoadingConversations] = useState<boolean>(true);
   const [showChat, setShowChat] = useState<boolean>(false);
   const [selectedFarmer, setSelectedFarmer] = useState<User | null>(null);
   const user = auth.currentUser;
@@ -40,6 +42,7 @@ const ExpertChatScreen = () => {
 
   useEffect(() => {
     fetchFarmers();
+    fetchConversations();
   }, []);
 
   const fetchFarmers = () => {
@@ -52,6 +55,50 @@ const ExpertChatScreen = () => {
       setFarmers(farmerList);
     }, (error) => {
       Alert.alert('Error', 'Failed to load farmers. Please try again later.');
+    });
+
+    return () => unsubscribe();
+  };
+
+  const fetchConversations = () => {
+    if (!user) return;
+
+    const conversationsQuery = query(collection(db, 'farmers'), where('role', '==', 'Farmer'));
+    const unsubscribe = onSnapshot(conversationsQuery, async (snapshot) => {
+      const conversationPromises = snapshot.docs.map(async (doc) => {
+        const farmer = { id: doc.id, ...doc.data() } as User;
+        const chatId = generateChatId(user.uid, farmer.id);
+
+        // Fetch the latest message from this chat
+        const latestMessageQuery = query(
+          collection(db, `chats/${chatId}/messages`),
+          orderBy('timestamp', 'desc'),
+          limit(1)
+        );
+
+        const latestMessageSnapshot = await new Promise((resolve) => {
+          onSnapshot(latestMessageQuery, (snapshot) => resolve(snapshot));
+        });
+
+        let latestMessage = 'No messages yet';
+
+        if (latestMessageSnapshot && !latestMessageSnapshot.empty) {
+          const messageDoc = latestMessageSnapshot.docs[0];
+          latestMessage = messageDoc.data()?.text || 'No messages yet'; // Safely access message data
+        }
+
+        return {
+          farmer,
+          latestMessage,
+        };
+      });
+
+      const fetchedConversations = await Promise.all(conversationPromises);
+      setConversations(fetchedConversations);
+      setLoadingConversations(false);
+    }, (error) => {
+      Alert.alert('Error', 'Failed to load conversations. Please try again later.');
+      setLoadingConversations(false);
     });
 
     return () => unsubscribe();
@@ -117,9 +164,10 @@ const ExpertChatScreen = () => {
     }
   };
 
-  const renderFarmerCard = ({ item }: { item: User }) => (
-    <TouchableOpacity style={styles.farmerCard} onPress={() => handleFarmerSelect(item)}>
-      <Text style={styles.farmerName}>{item.name}</Text>
+  const renderFarmerCard = ({ item }: { item: { farmer: User; latestMessage: string } }) => (
+    <TouchableOpacity style={styles.farmerCard} onPress={() => handleFarmerSelect(item.farmer)}>
+      <Text style={styles.farmerName}>{item.farmer.name}</Text>
+      <Text style={styles.latestMessage}>{item.latestMessage}</Text>
     </TouchableOpacity>
   );
 
@@ -169,13 +217,17 @@ const ExpertChatScreen = () => {
           </View>
         ) : (
           <View style={styles.farmerListContainer}>
-            <Text style={styles.header}>Farmers</Text>
-            <FlatList
-              data={farmers}
-              keyExtractor={(item) => item.id}
-              renderItem={renderFarmerCard}
-              style={styles.farmerList}
-            />
+            <Text style={styles.header}>Your Conversations</Text>
+            {loadingConversations ? (
+              <ActivityIndicator size="large" color="#0000ff" />
+            ) : (
+              <FlatList
+                data={conversations}
+                keyExtractor={(item) => item.farmer.id}
+                renderItem={renderFarmerCard}
+                style={styles.farmerList}
+              />
+            )}
           </View>
         )}
       </KeyboardAvoidingView>
@@ -200,6 +252,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  latestMessage: {
+    fontSize: 14,
+    color: '#777',
+  },
   chatContainer: {
     flex: 1,
   },
@@ -217,20 +273,15 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: '#ccc',
-    borderRadius: 10,
+    borderRadius: 5,
     padding: 10,
     marginRight: 10,
   },
-  messagesList: {
-    flex: 1,
-  },
-  messagesContainer: {
-    paddingBottom: 20,
-  },
   messageCard: {
-    borderRadius: 10,
     padding: 10,
+    borderRadius: 5,
     marginVertical: 5,
+    maxWidth: '80%',
   },
   userMessage: {
     alignSelf: 'flex-end',
@@ -244,19 +295,22 @@ const styles = StyleSheet.create({
   timestamp: {
     fontSize: 10,
     color: '#888',
-    marginTop: 5,
+  },
+  messagesList: {
+    flex: 1,
+  },
+  messagesContainer: {
+    paddingBottom: 20,
+  },
+  farmerListContainer: {
+    flex: 1,
   },
   backButton: {
     marginBottom: 10,
   },
   backButtonText: {
+    fontSize: 16,
     color: '#007BFF',
-  },
-  farmerListContainer: {
-    flex: 1,
-  },
-  farmerList: {
-    marginTop: 10,
   },
 });
 
