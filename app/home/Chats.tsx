@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { collection, query, onSnapshot, addDoc, Timestamp, orderBy, where } from 'firebase/firestore';
-import { db, auth, storage } from '@/services/config'; // Adjust the import path as necessary
+import { db, auth, storage } from '@/services/config';
 import { Ionicons } from '@expo/vector-icons';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 
@@ -46,10 +46,9 @@ const FarmerChatScreen = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchExperts();  // Fetch the list of available experts on screen load
+    fetchExperts();
   }, []);
 
-  // Fetch all experts for the farmer to chat with
   const fetchExperts = () => {
     const expertsQuery = query(collection(db, 'farmers'), where('role', '==', 'Expert'));
     const unsubscribe = onSnapshot(
@@ -70,7 +69,6 @@ const FarmerChatScreen = () => {
     return () => unsubscribe();
   };
 
-  // Handle expert selection by the farmer
   const handleExpertSelect = (expert: Expert) => {
     if (!user) {
       Alert.alert('Not Authenticated', 'You need to log in to chat.');
@@ -80,16 +78,14 @@ const FarmerChatScreen = () => {
     const generatedChatId = generateChatId(user.uid, expert.id);
     setChatId(generatedChatId);
     setSelectedExpert(expert);
-    fetchMessages(generatedChatId);  // Load previous messages for this farmer-expert chat
+    fetchMessages(generatedChatId);
     setShowChat(true);
   };
 
-  // Generate a chat ID that is unique for the farmer-expert pair
   const generateChatId = (uid1: string, uid2: string): string => {
     return uid1 < uid2 ? `${uid1}_${uid2}` : `${uid2}_${uid1}`;
   };
 
-  // Fetch chat messages for the selected expert
   const fetchMessages = (chatId: string) => {
     setLoadingMessages(true);
     const messagesQuery = query(collection(db, `chats/${chatId}/messages`), orderBy('timestamp', 'asc'));
@@ -110,7 +106,6 @@ const FarmerChatScreen = () => {
     return () => unsubscribe();
   };
 
-  // Handle sending of text and image messages
   const sendMessage = async () => {
     if (!message && !image) {
       Alert.alert('Empty Message', 'Please enter a message or select an image.');
@@ -126,20 +121,20 @@ const FarmerChatScreen = () => {
 
     try {
       const messageData: Message = {
-        text: message ? message.trim() : undefined,
+        text: message.trim() || undefined,
         timestamp: Timestamp.now(),
         sender: user.uid,
       };
 
       if (image) {
-        const imageUrl = await uploadImage(image);  // Upload image if selected
+        const imageUrl = await uploadImage(image);
         messageData.imageUrl = imageUrl;
       }
 
       await addDoc(collection(db, `chats/${chatId}/messages`), messageData);
       setMessage('');
       setImage(null);
-      Keyboard.dismiss();  // Close keyboard after sending
+      Keyboard.dismiss();
     } catch (error) {
       console.error('Error sending message:', error);
       Alert.alert('Error', 'Failed to send message.');
@@ -148,7 +143,6 @@ const FarmerChatScreen = () => {
     }
   };
 
-  // Pick an image from the gallery
   const handleImagePick = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
@@ -162,12 +156,10 @@ const FarmerChatScreen = () => {
     });
 
     if (!result.canceled && result.assets) {
-      const imageUri = result.assets[0].uri;
-      setImage(imageUri);  // Set selected image
+      setImage(result.assets[0].uri);
     }
   };
 
-  // Upload image to Firebase storage
   const uploadImage = async (uri: string) => {
     const blob = await fetch(uri).then((response) => response.blob());
     const storageRef = ref(storage, `images/${Date.now()}_${user?.uid}.jpg`);
@@ -189,25 +181,23 @@ const FarmerChatScreen = () => {
     });
   };
 
-  // Display full image in a modal when an image message is clicked
   const handleImagePress = (imageUrl: string) => {
     setSelectedImage(imageUrl);
     setModalVisible(true);
   };
 
-  // Render the list of messages between farmer and expert
   const renderMessagesList = () => (
     <FlatList
       data={messages}
       keyExtractor={(item, index) => index.toString()}
       renderItem={({ item }) => (
         <View style={[styles.messageCard, item.sender === user?.uid ? styles.userMessage : styles.otherMessage]}>
-          {item.text ? <Text>{item.text}</Text> : null}
-          {item.imageUrl ? (
+          {item.text && <Text>{item.text}</Text>}
+          {item.imageUrl && (
             <TouchableOpacity onPress={() => handleImagePress(item.imageUrl)}>
               <Image source={{ uri: item.imageUrl }} style={styles.imageMessage} />
             </TouchableOpacity>
-          ) : null}
+          )}
           <Text style={styles.timestamp}>{formatTimestamp(item.timestamp)}</Text>
         </View>
       )}
@@ -245,15 +235,17 @@ const FarmerChatScreen = () => {
               <Ionicons name="image" size={24} color="green" />
             </TouchableOpacity>
             <TouchableOpacity onPress={sendMessage} style={styles.sendButton} disabled={sendingMessage}>
+              {image && <Image source={{ uri: image }} style={styles.previewImage} />}
               <Ionicons name="send" size={24} color="white" />
             </TouchableOpacity>
           </View>
 
           {selectedImage && (
-            <Modal visible={modalVisible} transparent={true}>
+            <Modal visible={modalVisible} transparent={true} onRequestClose={() => setModalVisible(false)}>
               <View style={styles.modalContainer}>
-                <TouchableOpacity onPress={() => setModalVisible(false)}>
-                  <Image source={{ uri: selectedImage }} style={styles.fullImage} />
+                <Image source={{ uri: selectedImage }} style={styles.fullScreenImage} />
+                <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
+                  <Text style={styles.closeButtonText}>Close</Text>
                 </TouchableOpacity>
               </View>
             </Modal>
@@ -276,98 +268,27 @@ const FarmerChatScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 10,
-    backgroundColor: '#fff',
-  },
-  chatHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    backgroundColor: '#f1f1f1',
-  },
-  expertName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginLeft: 10,
-  },
-  backButton: {
-    padding: 5,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    borderTopWidth: 1,
-    borderColor: '#ccc',
-  },
-  messageInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    padding: 10,
-  },
-  imagePickerButton: {
-    marginLeft: 10,
-  },
-  sendButton: {
-    marginLeft: 10,
-    backgroundColor: 'green',
-    padding: 10,
-    borderRadius: 5,
-  },
-  messagesList: {
-    flex: 1,
-  },
-  messagesContainer: {
-    paddingBottom: 10,
-  },
-  messageCard: {
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 10,
-    maxWidth: '80%',
-  },
-  userMessage: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#d4edda',
-  },
-  otherMessage: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#f8d7da',
-  },
-  timestamp: {
-    fontSize: 10,
-    color: '#888',
-    marginTop: 5,
-  },
-  imageMessage: {
-    width: 100,
-    height: 100,
-    borderRadius: 5,
-    marginTop: 5,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-  },
-  fullImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'contain',
-  },
-  expertItem: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-  },
-  expertList: {
-    paddingBottom: 10,
-  },
+  container: { flex: 1, backgroundColor: '#fff' },
+  chatHeader: { flexDirection: 'row', alignItems: 'center', padding: 10, backgroundColor: '#f0f0f0' },
+  backButton: { marginRight: 10 },
+  expertName: { fontSize: 18, fontWeight: 'bold' },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', padding: 10, backgroundColor: '#fff' },
+  messageInput: { flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 20, padding: 10, marginRight: 10 },
+  imagePickerButton: { marginRight: 10 },
+  sendButton: { backgroundColor: 'green', padding: 10, borderRadius: 50 },
+  messagesList: { flex: 1 },
+  messagesContainer: { padding: 10 },
+  messageCard: { padding: 10, borderRadius: 8, marginBottom: 10 },
+  userMessage: { alignSelf: 'flex-end', backgroundColor: '#dcf8c6' },
+  otherMessage: { alignSelf: 'flex-start', backgroundColor: '#f0f0f0' },
+  timestamp: { fontSize: 10, color: '#555', marginTop: 5 },
+  expertItem: { padding: 20, borderBottomWidth: 1, borderBottomColor: '#ccc' },
+  imageMessage: { width: 150, height: 150, marginTop: 10 },
+  previewImage: { width: 30, height: 30, borderRadius: 15 },
+  modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.8)' },
+  fullScreenImage: { width: '90%', height: '70%' },
+  closeButton: { position: 'absolute', top: 30, right: 30, padding: 10, backgroundColor: 'green', borderRadius: 20 },
+  closeButtonText: { color: '#fff', fontSize: 16 },
 });
 
 export default FarmerChatScreen;
