@@ -26,7 +26,7 @@ const CustomDrawerContent = (props: any) => {
         <View style={styles.container}>
             <DrawerContentScrollView {...props} contentContainerStyle={{ backgroundColor: 'green' }} scrollEnabled={false}>
                 <View style={styles.header}>
-                    <Text style={styles.title}>Admin Menu</Text>
+                    <Text style={styles.title}>Menu</Text>
                 </View>
                 <View style={{ backgroundColor: '#fff', paddingTop: 10 }}>
                     <DrawerItemList {...props} />

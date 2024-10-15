@@ -1,5 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth, db } from '@/services/config'; // Adjust the import to your Firebase config
+import { doc, getDoc } from 'firebase/firestore';
 
 // Define a function to get the day name from the date
 const getDayName = (date: Date): string => {
@@ -17,6 +20,7 @@ const getMonthName = (date: Date): string => {
 };
 
 const Greeting: React.FC = () => {
+    const [userName, setUserName] = useState<string | null>(null);
     const currentDate: Date = new Date();
 
     // Get current hour for the greeting
@@ -34,17 +38,41 @@ const Greeting: React.FC = () => {
     // Determine greeting based on the hour
     const getGreeting = (): string => {
         if (currentHour < 12) {
-            return 'Mwaramutse!';
+            return 'Mwaramutse';
         } else if (currentHour < 18) {
-            return 'Mwiriwe!';
+            return 'Mwiriwe';
         } else {
-            return 'Muraho!';
+            return 'Muraho';
         }
     };
 
+    // Fetch the logged-in user's name
+    useEffect(() => {
+        const fetchUserName = async (userId: string) => {
+            const userDoc = doc(db, 'farmers', userId); // Adjust to your Firebase document path
+            const userSnapshot = await getDoc(userDoc);
+            if (userSnapshot.exists()) {
+                const userData = userSnapshot.data();
+                setUserName(userData?.name || 'Umukoresha');
+            }
+        };
+
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                fetchUserName(user.uid);
+            } else {
+                setUserName(null);
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
+
     return (
         <View style={styles.container}>
-            <Text style={styles.greetingText}>{getGreeting()}</Text>
+            <Text style={styles.greetingText}>
+                {getGreeting()} {userName ? `, ${userName}` : ''}!
+            </Text>
             <Text style={styles.dateText}>{formattedDate}</Text>
         </View>
     );
