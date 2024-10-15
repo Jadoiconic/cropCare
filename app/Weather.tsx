@@ -8,16 +8,39 @@ import {
     ActivityIndicator,
 } from 'react-native';
 import * as Location from 'expo-location';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Weather: React.FC = () => {
-    const apiKey = '646e427364d976db752529e161940cd0'; // Replace with your API key
+    const apiKey = '646e427364d976db752529e161940cd0';
     const [weatherData, setWeatherData] = useState<any>(null);
     const [locationMessage, setLocationMessage] = useState('Fetching your location...');
     const [detailedLocation, setDetailedLocation] = useState('Locating...');
 
     useEffect(() => {
-        getLocationAndFetchWeather();
+        loadStoredWeatherData();  // Load data from local storage
+        getLocationAndFetchWeather();  // Fetch new data
     }, []);
+
+    // Load weather data from AsyncStorage
+    const loadStoredWeatherData = async () => {
+        try {
+            const storedData = await AsyncStorage.getItem('weatherData');
+            if (storedData) {
+                setWeatherData(JSON.parse(storedData));
+            }
+        } catch (error) {
+            console.log('Error loading stored weather data:', error);
+        }
+    };
+
+    // Save weather data to AsyncStorage
+    const saveWeatherData = async (data: any) => {
+        try {
+            await AsyncStorage.setItem('weatherData', JSON.stringify(data));
+        } catch (error) {
+            console.log('Error saving weather data:', error);
+        }
+    };
 
     // Get location and fetch weather
     const getLocationAndFetchWeather = async () => {
@@ -51,6 +74,7 @@ const Weather: React.FC = () => {
             }
             const data = await response.json();
             setWeatherData(data);
+            saveWeatherData(data); // Save fetched data to local storage
         } catch (error) {
             setLocationMessage('Failed to fetch weather data. Please try again later.');
         }
@@ -91,7 +115,7 @@ const Weather: React.FC = () => {
             case 'mist':
                 return 'Igihu';
             default:
-                return "Igicu cyijimye";
+                return 'Igicu cyijimye';
         }
     };
 
@@ -146,7 +170,7 @@ const Weather: React.FC = () => {
                         <Text style={styles.description}>{simplifyDescription(description)}</Text>
                     </View>
                 </View>
-                <View style={{ borderRadius: 10, overflow: 'hidden', padding: 10, backgroundColor: '#dfe6e9', }}>
+                <View style={{ borderRadius: 10, overflow: 'hidden', padding: 10, backgroundColor: '#dfe6e9' }}>
                     <Text style={styles.adviceText}>
                         {getFarmingAdvice(simplifyDescription(description))}
                     </Text>
@@ -165,7 +189,7 @@ const Weather: React.FC = () => {
         );
 
         return (
-            <View style={styles.forecastContainer}>
+            <ScrollView horizontal={true} contentContainerStyle={styles.dailyForecastContainer}>
                 {dailyForecast.map((forecast: any, index: number) => {
                     const date = new Date(forecast.dt * 1000);
                     const day = date.toLocaleDateString('en-US', { weekday: 'long' });
@@ -185,7 +209,37 @@ const Weather: React.FC = () => {
                         </View>
                     );
                 })}
-            </View>
+            </ScrollView>
+        );
+    };
+
+    // Render hourly forecast
+    const renderHourlyForecast = () => {
+        if (!weatherData) return null;
+
+        const hourlyForecast = weatherData.list.slice(0, 12); // Next 12 hours forecast
+
+        return (
+            <ScrollView horizontal={true} contentContainerStyle={styles.hourlyForecastContainer}>
+                {hourlyForecast.map((forecast: any, index: number) => {
+                    const time = new Date(forecast.dt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const temp = forecast.main.temp;
+                    const description = simplifyDescription(forecast.weather[0].description);
+                    const iconCode = forecast.weather[0].icon;
+
+                    return (
+                        <View key={index} style={styles.hourlyCard}>
+                            <Text style={styles.hourlyTime}>{time}</Text>
+                            <Image
+                                source={{ uri: `https://openweathermap.org/img/w/${iconCode}.png` }}
+                                style={styles.hourlyIcon}
+                            />
+                            <Text style={styles.hourlyTemp}>{temp}°C</Text>
+                            <Text style={styles.hourlyDescription}>{description}</Text>
+                        </View>
+                    );
+                })}
+            </ScrollView>
         );
     };
 
@@ -194,10 +248,10 @@ const Weather: React.FC = () => {
             {weatherData ? (
                 <>
                     {renderCurrentWeather()}
-                    <View>
-                        <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#4A90E2' }}> Iteganyagihe Ry'Iminsi 7</Text>
-                    </View>
+                    <Text style={styles.cardTitle}>Iteganyagihe Ry'Iminsi 7</Text>
                     {render7DayForecast()}
+                    <Text style={styles.cardTitle}>Iteganyagihe Ry'Amasaha</Text>
+                    {renderHourlyForecast()}
                 </>
             ) : (
                 <ActivityIndicator size="large" color="#00ff00" />
@@ -206,108 +260,113 @@ const Weather: React.FC = () => {
     );
 };
 
-export default Weather;
-
 const styles = StyleSheet.create({
     container: {
         flexGrow: 1,
-        padding: 16,
-        backgroundColor: '#f5f5f5',
-    },
-    infoText: {
-        textAlign: 'center',
-        color: '#888',
-        fontSize: 16,
-        marginVertical: 20,
+        padding: 20,
+        backgroundColor: '#fff',
     },
     weatherCard: {
-        padding: 16,
+        borderRadius: 10,
+        padding: 20,
         backgroundColor: '#fff',
-        borderRadius: 12,
+        elevation: 3,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 6,
-        elevation: 3,
+        shadowOpacity: 0.3,
+        shadowRadius: 3,
         marginBottom: 20,
     },
     cardTitle: {
-        fontSize: 24,
+        fontSize: 20,
         fontWeight: 'bold',
+        marginBottom: 10,
         color: '#4A90E2',
-        marginBottom: 8,
     },
     locationText: {
-        fontSize: 18,
-        color: '#333',
-        marginBottom: 16,
+        fontSize: 16,
+        marginBottom: 5,
     },
     weatherRow: {
         flexDirection: 'row',
         alignItems: 'center',
+        marginBottom: 10,
     },
     weatherIcon: {
-        width: 60,
-        height: 60,
-        marginRight: 16,
+        width: 50,
+        height: 50,
+        marginRight: 10,
     },
     temperature: {
-        fontSize: 48,
+        fontSize: 32,
         fontWeight: 'bold',
         color: '#4A90E2',
     },
     description: {
-        fontSize: 24,
-        color: 'black',
-        fontWeight: 'bold',
-        marginHorizontal: 10,
-        marginVertical: 6
+        fontSize: 16,
+        color: '#666',
     },
     adviceText: {
-        fontSize: 20,
-        color: 'green',
-        marginTop: 8,
+        fontSize: 14,
+        color: '#333',
         textAlign: 'center',
-        fontWeight: 'bold',
-        borderRadius: 10
     },
-    forecastContainer: {
-        marginTop: 20,
-        padding: 10,
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 6,
-        elevation: 3,
-    },
-    forecastCard: {
+    dailyForecastContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        marginBottom: 20,
+        paddingHorizontal: 10,
+    },
+    forecastCard: {
         alignItems: 'center',
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        width: 100,
+        paddingHorizontal: 10,
     },
     forecastDay: {
-        fontSize: 18,
-        color: '#333',
-        flex: 1,
+        fontSize: 16,
+        fontWeight: 'bold',
     },
     forecastIcon: {
         width: 40,
         height: 40,
+        marginVertical: 5,
     },
     forecastTemp: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: 'bold',
-        color: '#333',
+        color: '#4A90E2',
     },
     forecastDescription: {
-        fontSize: 16,
+        fontSize: 14,
         color: '#666',
-        flex: 2,
-        textAlign: 'right',
+        textAlign: 'center',
+    },
+    hourlyForecastContainer: {
+        paddingVertical: 10,
+    },
+    hourlyCard: {
+        alignItems: 'center',
+        marginHorizontal: 10,
+    },
+    hourlyTime: {
+        fontSize: 16,
+        color: '#333',
+    },
+    hourlyIcon: {
+        width: 40,
+        height: 40,
+        marginVertical: 5,
+    },
+    hourlyTemp: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#4A90E2',
+    },
+    hourlyDescription: {
+        fontSize: 14,
+        color: '#666',
+        textAlign: 'center',
     },
 });
+
+export default Weather;
