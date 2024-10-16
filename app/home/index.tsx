@@ -1,12 +1,32 @@
-import { StyleSheet, TouchableOpacity, Text, View, ScrollView } from 'react-native'; 
-import React from 'react';
+import { StyleSheet, TouchableOpacity, Text, View, ScrollView, Alert } from 'react-native'; 
+import React, { useEffect, useState } from 'react';
 import Greeting from '@/components/Greeting';
 import { useRouter } from 'expo-router';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
+import { auth } from '@/services/config'; // Ensure your Firebase config is imported
 
 const HomeScreen = () => {
     const router = useRouter();
-    
+    const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+
+    useEffect(() => {
+        const unsubscribe = auth.onAuthStateChanged(user => {
+            if (user) {
+                setIsLoggedIn(true);
+            } else {
+                // Redirect to login page if not logged in
+                router.push('/auth/'); // Redirect to the auth page
+            }
+        });
+
+        return () => unsubscribe();
+    }, [router]);
+
+    // Optionally, return a loading indicator while checking authentication
+    if (!isLoggedIn) {
+        return null; // or a loading spinner
+    }
+
     return (
         <ScrollView style={styles.container}>
             <Greeting />

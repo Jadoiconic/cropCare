@@ -174,7 +174,6 @@ const ExpertChatScreen = () => {
     });
   };
 
-  // Function to open image in full-screen modal
   const handleImagePress = (imageUrl: string) => {
     setSelectedImage(imageUrl);
     setModalVisible(true);
@@ -186,7 +185,7 @@ const ExpertChatScreen = () => {
       keyExtractor={(item, index) => index.toString()}
       renderItem={({ item }) => (
         <View style={[styles.messageCard, item.sender === user?.uid ? styles.userMessage : styles.otherMessage]}>
-          {item.text ? <Text>{item.text}</Text> : null}
+          {item.text ? <Text style={styles.messageText}>{item.text}</Text> : null}
           {item.imageUrl ? (
             <TouchableOpacity onPress={() => handleImagePress(item.imageUrl)}>
               <Image source={{ uri: item.imageUrl }} style={styles.imageMessage} />
@@ -222,6 +221,7 @@ const ExpertChatScreen = () => {
               onChangeText={setMessage}
               style={styles.input}
               multiline={true}
+              placeholderTextColor="#888" // Placeholder color for better readability
             />
             <TouchableOpacity
               onPress={handleImagePick}
@@ -252,7 +252,6 @@ const ExpertChatScreen = () => {
         />
       )}
 
-      {/* Modal for full-screen image */}
       <Modal visible={modalVisible} transparent={true}>
         <View style={styles.modalContainer}>
           <Image source={{ uri: selectedImage }} style={styles.fullScreenImage} />
@@ -268,103 +267,101 @@ const ExpertChatScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff', // Set a white background for the entire screen
+    backgroundColor: '#f8f8f8',
+    paddingTop: 20,
   },
   chatContainer: {
     flex: 1,
-    padding: 10, // Add padding to the chat container
+  },
+  backButton: {
+    padding: 10,
+    backgroundColor: '#4CAF50',
+    borderRadius: 5,
+  },
+  backButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  header: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginVertical: 10,
+  },
+  messagesList: {
+    flex: 1,
+    paddingHorizontal: 10,
+    paddingBottom: 10,
+  },
+  messagesContainer: {
+    paddingBottom: 100, // Add padding to prevent overlap with the input
+  },
+  messageCard: {
+    padding: 10,
+    marginVertical: 5,
+    borderRadius: 10,
+    maxWidth: '80%',
+  },
+  userMessage: {
+    backgroundColor: '#d1e7dd',
+    alignSelf: 'flex-end',
+  },
+  otherMessage: {
+    backgroundColor: '#f1f1f1',
+    alignSelf: 'flex-start',
+  },
+  messageText: {
+    fontSize: 16,
+  },
+  imageMessage: {
+    width: 100,
+    height: 100,
+    borderRadius: 10,
+    marginVertical: 5,
+    alignSelf: 'center',
+  },
+  timestamp: {
+    fontSize: 10,
+    color: '#888',
+    marginTop: 5,
+    alignSelf: 'flex-end',
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 10,
     borderTopWidth: 1,
-    borderTopColor: '#ccc', // Add a top border for better separation
+    borderTopColor: '#ccc',
+    backgroundColor: '#fff',
   },
   input: {
     flex: 1,
-    backgroundColor: '#f2f2f2',
-    padding: 10,
-    borderRadius: 25, // Make the input field more rounded
-    maxHeight: 100,
-    borderColor: '#ddd', // Light border for input
     borderWidth: 1,
-    fontSize: 16, // Increase font size for better readability
+    borderColor: '#ccc',
+    borderRadius: 5,
+    padding: 10,
+    marginRight: 10,
+    backgroundColor: '#f9f9f9', // Light background for input field
   },
   iconButton: {
-    marginLeft: 10,
-    padding: 10, // Add padding around icon buttons
-    borderRadius: 25, // Make icon buttons rounded
-    backgroundColor: '#e1e1e1', // Light gray background for buttons
-  },
-  messageCard: {
     padding: 10,
-    marginBottom: 10,
-    borderRadius: 15, // More rounded corners for message bubbles
-    maxWidth: '80%',
-    shadowColor: '#000', // Adding shadow for depth
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3, // For Android shadow
-  },
-  userMessage: {
-    backgroundColor: '#d1ffd1', // Lighter green for user messages
-    alignSelf: 'flex-end',
-  },
-  otherMessage: {
-    backgroundColor: '#f2f2f2',
-    alignSelf: 'flex-start',
-  },
-  imageMessage: {
-    width: 200,
-    height: 200,
-    borderRadius: 15, // More rounded corners for image messages
-    marginVertical: 5, // Add space around images
-  },
-  timestamp: {
-    fontSize: 10,
-    color: '#888',
-    marginTop: 5,
-    alignSelf: 'flex-end', // Align timestamp to the right
-  },
-  messagesList: {
-    flex: 1,
-  },
-  messagesContainer: {
-    paddingVertical: 10,
-  },
-  backButton: {
-    padding: 10,
-    backgroundColor: '#007AFF', // Background color for back button
-    borderRadius: 5, // Rounded corners
-    alignItems: 'center', // Center the text
-  },
-  backButtonText: {
-    color: '#ffffff', // White text for contrast
-    fontWeight: 'bold', // Bold text for emphasis
-  },
-  farmerCard: {
-    padding: 20,
-    backgroundColor: '#f9f9f9',
-    borderBottomWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 5, // Rounded corners for farmer cards
-  },
-  farmerListContainer: {
-    paddingBottom: 10,
-  },
-  header: {
-    fontSize: 20, // Larger font size for header
-    fontWeight: 'bold',
-    marginVertical: 10,
-    textAlign: 'center', // Centered header
   },
   previewImage: {
     width: 100,
     height: 100,
     borderRadius: 10,
-    marginTop: 10,
+    marginVertical: 5,
+    alignSelf: 'flex-end',
+  },
+  farmerCard: {
+    padding: 15,
+    marginVertical: 5,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    elevation: 2,
+  },
+  farmerListContainer: {
+    padding: 10,
   },
   modalContainer: {
     flex: 1,
@@ -373,23 +370,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   fullScreenImage: {
-    width: '90%',
-    height: '80%',
-    borderRadius: 10,
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
   },
   closeButton: {
+    position: 'absolute',
+    bottom: 20,
     padding: 10,
-    backgroundColor: '#007AFF',
-    marginTop: 20,
-    borderRadius: 5, // Rounded corners for close button
+    backgroundColor: '#4CAF50',
+    borderRadius: 5,
   },
   closeButtonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold', // Bold text for close button
+    fontWeight: 'bold',
   },
 });
-
-
 
 export default ExpertChatScreen;
