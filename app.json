@@ -41,7 +41,10 @@
       "typedRoutes": true
     },
     "extra": {
-      "apiKey": "646e427364d976db752529e161940cd0" 
+      "apiKey": "646e427364d976db752529e161940cd0",
+      "eas": {
+        "projectId": "49193a5e-bb4b-4372-80dd-bbc71b82700e"
+      }
     }
   }
 }
