@@ -10,6 +10,7 @@ import {
     FlatList,
     ScrollView,
     ActivityIndicator,
+    ProgressBarAndroid,
 } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -30,9 +31,11 @@ const PlantingSchedule: React.FC = () => {
     const [farmName, setFarmName] = useState<string>('');
     const [scheduleList, setScheduleList] = useState<any[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
+    const [progress, setProgress] = useState<number>(0); // Progress state for each crop
 
     const router = useRouter();
 
+    // Request notifications permission
     useEffect(() => {
         const requestPermissions = async () => {
             const { status } = await Notifications.getPermissionsAsync();
@@ -43,6 +46,7 @@ const PlantingSchedule: React.FC = () => {
         requestPermissions();
     }, []);
 
+    // Handle authentication state and fetch schedules
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -56,6 +60,7 @@ const PlantingSchedule: React.FC = () => {
         return () => unsubscribe();
     }, []);
 
+    // Fetch schedules and handle offline storage
     const fetchUserSchedules = async (userId: string) => {
         const schedulesRef = collection(db, 'PlantingSchedules');
         const q = query(schedulesRef, where('userId', '==', userId));
@@ -81,18 +86,24 @@ const PlantingSchedule: React.FC = () => {
         }
     };
 
+    // Format date for display
     const formatDate = (date: any) => {
         if (!date) return 'N/A';
         return new Date(date).toLocaleDateString('en-GB');
     };
 
-    const calculateRemainingDays = (plantingDate: string) => {
+    // Calculate progress (days remaining for the first task, such as treatment)
+    const calculateProgress = (plantingDate: string) => {
         const currentDate = moment();
         const plantedDate = moment(plantingDate);
         const diffDays = currentDate.diff(plantedDate, 'days');
-        return diffDays >= 30 ? 0 : 30 - diffDays; // Treatment starts after 30 days for potatoes
+        const totalDays = 90; // Example crop lifecycle (e.g., 90 days for maize or potatoes)
+        const progress = Math.min((diffDays / totalDays) * 100, 100); // Progress in percentage
+        setProgress(progress);
+        return progress;
     };
 
+    // Save the planting date and schedule tasks
     const savePlantingDate = async () => {
         if (!plantingDate || !cropType || performedActions.trim() === '' || farmName.trim() === '') {
             Alert.alert('Input error', 'Mwihangane, Mwuzuze amakuru yose Akenewe.');
@@ -122,6 +133,7 @@ const PlantingSchedule: React.FC = () => {
         }
     };
 
+    // Clear form fields after saving
     const clearForm = () => {
         setPlantingDate(null);
         setCropType(null);
@@ -129,6 +141,7 @@ const PlantingSchedule: React.FC = () => {
         setFarmName('');
     };
 
+    // Mark an activity as complete
     const markAsComplete = async (scheduleId: string) => {
         try {
             const scheduleRef = doc(db, 'PlantingSchedules', scheduleId);
@@ -140,6 +153,7 @@ const PlantingSchedule: React.FC = () => {
         }
     };
 
+    // Delete a schedule
     const deleteSchedule = async (scheduleId: string) => {
         try {
             const scheduleRef = doc(db, 'PlantingSchedules', scheduleId);
@@ -151,6 +165,7 @@ const PlantingSchedule: React.FC = () => {
         }
     };
 
+    // Schedule notifications for reminders
     const scheduleInitialNotification = async (date: Date) => {
         await Notifications.scheduleNotificationAsync({
             content: {
@@ -162,6 +177,7 @@ const PlantingSchedule: React.FC = () => {
         });
     };
 
+    // Handle date picker changes
     const handleDateChange = (event: any, selectedDate?: Date) => {
         setShowDatePicker(false);
         if (selectedDate) {
@@ -172,6 +188,8 @@ const PlantingSchedule: React.FC = () => {
     return (
         <ScrollView style={styles.container}>
             <Text style={styles.title}>Iteganya migambi kugihingwa</Text>
+
+            {/* Crop Type Selection */}
             <View style={styles.cropSelection}>
                 <TouchableOpacity
                     style={[styles.cropButton, cropType === 'Ibigori' && styles.selectedButton]}
@@ -188,6 +206,8 @@ const PlantingSchedule: React.FC = () => {
                     <Text style={styles.buttonText}>Ibirayi</Text>
                 </TouchableOpacity>
             </View>
+
+            {/* Planting Date Picker */}
             <Button title="Kanda Hano Uhitemo Itariki Watereyeho!" onPress={() => setShowDatePicker(true)} />
             {showDatePicker && (
                 <DateTimePicker
@@ -198,6 +218,8 @@ const PlantingSchedule: React.FC = () => {
                     onChange={handleDateChange}
                 />
             )}
+
+            {/* Input Fields */}
             <TextInput
                 style={styles.input}
                 placeholder="Injiza Igikorwa Upanga Gukora (Urug., kuhira, kubagara, Gutera Umuti...)"
@@ -210,10 +232,13 @@ const PlantingSchedule: React.FC = () => {
                 value={farmName}
                 onChangeText={setFarmName}
             />
+
+            {/* Save Button */}
             <TouchableOpacity onPress={savePlantingDate} style={styles.saveButton}>
                 <Text style={styles.saveButtonText}>Bika Amakuru</Text>
             </TouchableOpacity>
 
+            {/* Loading and Schedule List */}
             {loading ? (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color="#0000ff" />
@@ -224,7 +249,7 @@ const PlantingSchedule: React.FC = () => {
                     data={scheduleList}
                     keyExtractor={(item) => item.id}
                     renderItem={({ item }) => {
-                        const remainingDays = calculateRemainingDays(item.plantingDate);
+                        const progress = calculateProgress(item.plantingDate);
                         return (
                             <View style={styles.scheduleItem}>
                                 <Text style={styles.scheduleText}>Igihingwa: {item.cropName}</Text>
@@ -232,7 +257,11 @@ const PlantingSchedule: React.FC = () => {
                                 <Text style={styles.scheduleText}>Amakuru yakorewe: {item.performedActions}</Text>
                                 <Text style={styles.scheduleText}>Aho Umurima: {item.farmName}</Text>
                                 <Text style={styles.scheduleText}>Icyiciro: {item.status}</Text>
-                                <Text style={styles.scheduleText}>Amasaha asigaye: {remainingDays} iminsi</Text>
+
+                                {/* Progress Bar */}
+                                <Text style={styles.scheduleText}>Iterambere ry'Igihingwa: {progress}%</Text>
+                                <ProgressBarAndroid styleAttr="Horizontal" indeterminate={false} progress={progress / 100} />
+
                                 {item.status !== 'Igikorwa Cyarangiye' && (
                                     <TouchableOpacity onPress={() => markAsComplete(item.id)} style={styles.actionButton}>
                                         <Text style={styles.actionButtonText}>Shyiraho Ko Cyarangiye</Text>

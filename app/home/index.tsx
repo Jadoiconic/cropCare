@@ -1,79 +1,62 @@
-import { StyleSheet, TouchableOpacity, Text, View, ScrollView } from 'react-native';
+import { StyleSheet, TouchableOpacity, Text, View, ScrollView } from 'react-native'; 
 import React from 'react';
 import Greeting from '@/components/Greeting';
 import { useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
-const HomeScreen = () => { // Renamed to uppercase
+const HomeScreen = () => {
     const router = useRouter();
+    
     return (
         <ScrollView style={styles.container}>
             <Greeting />
+            
+            {/* Chat Button */}
+            <TouchableOpacity 
+                onPress={() => router.navigate("/home/Chats")} 
+                style={styles.chatButton}
+            >
+                <Ionicons name="chatbubble" size={30} color="white" />
+                <Text style={styles.chatText}>Chat</Text>
+            </TouchableOpacity>
 
+            {/* Grid of Options */}
             <View style={styles.gridContainer}>
-                <View style={styles.row}>
-                    <TouchableOpacity
-                        onPress={() => router.push("/Weather")} // Changed to push
-                        style={styles.cardContainer}
-                        accessibilityLabel="Navigate to Weather Screen"
-                    >
-                        <Ionicons name="cloud" size={40} color="#4A90E2" />
-                        <Text style={styles.cardLabel}>Iteganya igihe</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        onPress={() => router.push("/Lessons")} // Changed to push
-                        style={styles.cardContainer}
-                        accessibilityLabel="Navigate to Lessons Screen"
-                    >
-                        <Ionicons name="stats-chart-outline" size={40} color="#8BC34A" />
-                        <Text style={styles.cardLabel}>Amasomo kubuhinzi</Text>
-                    </TouchableOpacity>
-                </View>
-
-                <View style={styles.row}>
-                    <TouchableOpacity
-                        onPress={() => router.push("/CropManagement")} // Changed to push
-                        style={styles.cardContainer}
-                        accessibilityLabel="Navigate to Crop Management Screen"
-                    >
-                        <Ionicons name="leaf-outline" size={40} color="#8BC34A" />
-                        <Text style={styles.cardLabel}>Gukurikirana Igihingwa</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={() => router.push("/home/Forum")} // Changed to push
-                        style={styles.cardContainer}
-                        accessibilityLabel="Navigate to Forum Screen"
-                    >
-                        <Ionicons name="people-outline" size={40} color="#8BC34A" />
-                        <Text style={styles.cardLabel}>Uruganiriro</Text>
-                    </TouchableOpacity>
-                </View>
-                <View style={styles.row}>
-                    <TouchableOpacity
-                        onPress={() => router.push("/Watering")} // Changed to push
-                        style={styles.cardContainer}
-                        accessibilityLabel="Navigate to Watering Screen"
-                    >
-                        <MaterialCommunityIcons name="watering-can-outline" size={40} color="#8BC34A" />
-                        <Text style={styles.cardLabel}>Kuhira no Kuvomera</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={() => router.push("/Pests")} // Changed to push
-                        style={styles.cardContainer}
-                        accessibilityLabel="Navigate to Pests Screen"
-                    >
-                        <Ionicons name="bug-outline" size={40} color="#8BC34A" />
-                        <Text style={styles.cardLabel}>Ibyonyi n' Indwara</Text>
-                    </TouchableOpacity>
-                </View>
+                {renderRow([
+                    { onPress: () => router.push("/Weather"), icon: "cloud", label: "Iteganya igihe" },
+                    { onPress: () => router.push("/Lessons"), icon: "stats-chart-outline", label: "Amasomo kubuhinzi" }
+                ])}
+                {renderRow([
+                    { onPress: () => router.push("/CropManagement"), icon: "leaf-outline", label: "Gukurikirana Igihingwa" },
+                    { onPress: () => router.push("/home/Forum"), icon: "people-outline", label: "Uruganiriro" }
+                ])}
+                {renderRow([
+                    { onPress: () => router.push("/Watering"), icon: "water", label: "Kuhira no Kuvomera" },
+                    { onPress: () => router.push("/Pests"), icon: "bug-outline", label: "Ibyonyi n' Indwara" }
+                ])}
             </View>
-           
         </ScrollView>
     );
 }
 
-export default HomeScreen; // Updated to match the component name
+// Helper function to render rows
+const renderRow = (items) => (
+    <View style={styles.row}>
+        {items.map((item, index) => (
+            <TouchableOpacity
+                key={index} // Use index as key, consider using a unique ID in a real scenario
+                onPress={item.onPress}
+                style={styles.cardContainer}
+                accessibilityLabel={`Navigate to ${item.label} Screen`}
+            >
+                <Ionicons name={item.icon} size={40} color="#8BC34A" />
+                <Text style={styles.cardLabel}>{item.label}</Text>
+            </TouchableOpacity>
+        ))}
+    </View>
+);
+
+export default HomeScreen;
 
 const styles = StyleSheet.create({
     container: {
@@ -103,8 +86,8 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
         shadowOffset: { width: 0, height: 5 },
         elevation: 3,
-        width: '45%', // Responsive width
-        aspectRatio: 1, // Maintain square shape
+        width: '45%',
+        aspectRatio: 1,
         margin: 10,
     },
     cardLabel: {
@@ -113,5 +96,20 @@ const styles = StyleSheet.create({
         fontWeight: '500',
         textAlign: 'center',
         color: '#333',
+    },
+    chatButton: {
+        position: 'absolute', // Absolute positioning for the button
+        top: 10, // Adjust this value for vertical placement
+        right: 10, // Place it on the right side
+        backgroundColor: 'green', // Background color for visibility
+        borderRadius: 50, // Make it circular
+        padding: 10, // Padding around the icon and text
+        elevation: 5, // Shadow effect for depth
+        flexDirection: 'row', // Align icon and text horizontally
+        alignItems: 'center', // Center them vertically
+    },
+    chatText: {
+        marginLeft: 5, // Space between icon and text
+        color: 'white', // Text color for contrast
     },
 });

@@ -46,14 +46,14 @@ const _layout = () => {
                         <Entypo name="menu" size={24} color="white" />
                     </TouchableOpacity>
                 ),
-                headerRight: () => (
-                    <TouchableOpacity 
-                        onPress={() => router.navigate("/home/Chats")} 
-                        style={{ position: 'relative', paddingHorizontal: 10 }}
-                    >
-                        <Ionicons name="chatbubble" size={30} color="white" />
-                    </TouchableOpacity>
-                ),
+                // headerRight: () => (
+                //     <TouchableOpacity 
+                //         onPress={() => router.navigate("/home/Chats")} 
+                //         style={{ position: 'relative', paddingHorizontal: 10 }}
+                //     >
+                //         <Ionicons name="chatbubble" size={30} color="white" />
+                //     </TouchableOpacity>
+                // ),
                 
                 
                 tabBarActiveTintColor: 'green',
@@ -90,7 +90,7 @@ const _layout = () => {
             <Tabs.Screen
                 name='Notifications'
                 options={{
-                    title: "Notification",
+                    title: "Amamenyesha",
                     tabBarIcon: ({ size, color }) => (
                         <FontAwesome name='bell' size={size} color={color} />
                     )
@@ -100,7 +100,7 @@ const _layout = () => {
             <Tabs.Screen
                 name='Profile'
                 options={{
-                    title: "Profile",
+                    title: "Umwirondoro",
                     tabBarIcon: ({ size, color }) => (
                         <Ionicons name='person' size={size} color={color} />
                     )
@@ -110,14 +110,14 @@ const _layout = () => {
                 name="crop-management/PlantingSchedule"
                 options={{
                     tabBarButton: () => null,
-                    title: "Planting Schedule"
+                    title: "Pangira Igihingwa"
                 }}
             />
             <Tabs.Screen
                 name="crop-management/Fertilization"
                 options={{
                     tabBarButton: () => null,
-                    title: "Fertilization"
+                    title: "Uko Bafumbira"
                 }}
             />
             <Tabs.Screen
@@ -138,14 +138,14 @@ const _layout = () => {
                 name="crop-management/PestControl"
                 options={{
                     tabBarButton: () => null,
-                    title: "Pest Control"
+                    title: "Genzura Ibyonnyi"
                 }}
             />
             <Tabs.Screen
                 name="Chats"
                 options={{
                     tabBarButton: () => null,
-                    title: "Expert Chat"
+                    title: "Ganira"
                 }}
             />
         </Tabs>

@@ -145,7 +145,7 @@ const Forum = () => {
                 extraData={posts}
             />
 
-            <TouchableOpacity style={styles.chatButton} onPress={() => router.push('/home/hats')}>
+            <TouchableOpacity style={styles.chatButton} onPress={() => router.push('/home/Chats')}>
                 <Text style={styles.chatButtonText}>Twandikire Abajyanama</Text>
             </TouchableOpacity>
 

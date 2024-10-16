@@ -117,11 +117,45 @@ export default function Layout() {
           options={{
             drawerItemStyle: { display: 'none' },
             headerShown: false,
-          }}
-          
+          }} 
         />
-        
+        <Drawer.Screen
+          name="addfile"
+          options={{
+            drawerItemStyle: { display: 'none' },
+            headerShown: false,
+          }} 
+        />
+        <Drawer.Screen
+          name="manages"
+          options={{
+            drawerItemStyle: { display: 'none' },
+            headerShown: false,
+          }} 
+        />
+        <Drawer.Screen
+          name="ExpertChat"
+          options={{
+            drawerItemStyle: { display: 'none' },
+            headerShown: false,
+          }} 
+        />
+        <Drawer.Screen
+          name="registerexpert"
+          options={{
+            drawerItemStyle: { display: 'none' },
+            headerShown: false,
+          }} 
+        />
+        <Drawer.Screen
+          name="registerfarmer"
+          options={{
+            drawerItemStyle: { display: 'none' },
+            headerShown: false,
+          }} 
+        />
       </Drawer>
+      
     </GestureHandlerRootView>
   );
 }

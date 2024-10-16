@@ -4,13 +4,13 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '@/services/config'; // Adjust the import to your Firebase config
 import { doc, getDoc } from 'firebase/firestore';
 
-// Define a function to get the day name from the date
+// Function to get the day name from the date
 const getDayName = (date: Date): string => {
     const days: string[] = ['Kucyumweru', 'Kuwa Mbere', 'Kuwa Kabiri', 'Kuwa Gatatu', 'Kuwa Kane', 'Kuwa Gatanu', 'Kuwa Gatandatu'];
     return days[date.getDay()];
 };
 
-// Define a function to get the month name from the date
+// Function to get the month name from the date
 const getMonthName = (date: Date): string => {
     const months: string[] = [
         'Mutarama', 'Gashyantare', 'Werurwe', 'Mata', 'Gicurasi', 'Kamena',
@@ -32,7 +32,7 @@ const Greeting: React.FC = () => {
     const day: number = currentDate.getDate();
     const year: number = currentDate.getFullYear();
 
-    // Format the date string (e.g., "Wednesday, 2 October, 2024")
+    // Format the date string
     const formattedDate: string = `${dayName}, ${day} ${monthName}, ${year}`;
 
     // Determine greeting based on the hour
@@ -71,8 +71,9 @@ const Greeting: React.FC = () => {
     return (
         <View style={styles.container}>
             <Text style={styles.greetingText}>
-                {getGreeting()} {userName ? `, ${userName}` : ''}!
+                {getGreeting()}!
             </Text>
+            {userName && <Text style={styles.userNameText}>{userName}</Text>}
             <Text style={styles.dateText}>{formattedDate}</Text>
         </View>
     );
@@ -87,6 +88,12 @@ const styles = StyleSheet.create({
         fontSize: 32,
         fontWeight: 'bold',
         color: '#000',
+    },
+    userNameText: {
+        fontSize: 20,
+        fontWeight: '500',
+        color: '#555',
+        marginTop: 5, // Space between greeting and username
     },
     dateText: {
         fontSize: 16,
