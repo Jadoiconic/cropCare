@@ -52,7 +52,7 @@ const HomeScreen = () => {
 
         const adminItems = [
             ...farmerItems.slice(0, 2),
-            { onPress: () => router.push("/manages"), icon: "person", label: "Abakoresha App" },
+            { onPress: () => router.push("/home/manages"), icon: "person", label: "Abakoresha App" },
             { onPress: () => router.push("/addfile"), icon: "book", label: "Kongeraho Infasha Nyigisho" },
             ...farmerItems.slice(2)
         ];

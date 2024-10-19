@@ -141,6 +141,13 @@ const _layout = () => {
           title: 'Pangira igihingwa',
         }}
       />
+      <Tabs.Screen
+        name="manages"
+        options={{
+          tabBarButton: () => null,
+          title: 'Admin Management',
+        }}
+      />
     </Tabs>
   );
 };

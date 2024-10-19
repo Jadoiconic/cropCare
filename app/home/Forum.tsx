@@ -9,6 +9,7 @@ import {
     Button,
     Image,
     Modal,
+    Alert
 } from 'react-native';
 import { collection, addDoc, getDocs, getDoc, serverTimestamp, doc } from 'firebase/firestore';
 import { auth, db } from '@/services/config';
@@ -67,6 +68,19 @@ const Forum = () => {
     const [selectedImage, setSelectedImage] = useState(null);
     const currentUser = auth.currentUser?.email;
 
+    // Request camera roll permission on mount
+    useEffect(() => {
+        const requestCameraRollPermission = async () => {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert('Permission required', 'Permission to access camera roll is required!');
+            }
+        };
+
+        requestCameraRollPermission();
+    }, []);
+
+    // Fetch posts on component mount
     useEffect(() => {
         if (!currentUser) {
             router.push("/auth");
@@ -84,18 +98,6 @@ const Forum = () => {
 
         fetchPosts();
     }, [currentUser]);
-
-    // Request camera roll permissions
-    const requestCameraRollPermission = async () => {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-            alert("Sorry, we need camera roll permissions to make this work!");
-        }
-    };
-
-    useEffect(() => {
-        requestCameraRollPermission();
-    }, []);
 
     const handleCreatePost = async () => {
         if (newPostContent.trim()) {
@@ -125,7 +127,7 @@ const Forum = () => {
 
     const closeImageModal = () => {
         setModalVisible(false);
-        setSelectedImage(null); // Clear the selected image
+        setSelectedImage(null);
     };
 
     return (
@@ -285,77 +287,76 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         marginBottom: 10,
     },
-    chatButton: {
-        backgroundColor: '#007bff',
-        padding: 10,
-        borderRadius: 10,
-        alignItems: 'center',
-        marginTop: 10,
-    },
-    chatButtonText: {
-        color: '#fff',
-        fontWeight: 'bold',
-    },
     post: {
-        borderWidth: 1,
-        borderColor: '#ccc',
+        backgroundColor: '#f9f9f9',
+        padding: 15,
         borderRadius: 10,
-        padding: 10,
         marginBottom: 10,
     },
     postText: {
         fontSize: 16,
+        marginBottom: 5,
     },
     postOwnerText: {
-        fontSize: 12,
-        color: '#888',
+        fontSize: 14,
+        fontWeight: 'bold',
+        marginBottom: 5,
     },
     postImage: {
         width: '100%',
         height: 200,
         borderRadius: 10,
-        marginTop: 10,
     },
     replyText: {
         color: '#007bff',
-        marginTop: 10,
+        marginTop: 5,
     },
     replyInputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 10,
+        marginTop: 5,
+    },
+    replyButton: {
+        color: '#007bff',
+        marginLeft: 10,
     },
     repliesContainer: {
         marginTop: 10,
-        marginLeft: 20,
     },
-    fullScreenImage: {
-        width: '100%',
-        height: '100%',
-        resizeMode: 'contain',
+    chatButton: {
+        backgroundColor: '#fff',
+        borderColor: '#28a745',
+        borderWidth: 2,
+        borderRadius: 10,
+        padding: 15,
+        alignItems: 'center',
+        marginTop: 20,
+    },
+    chatButtonText: {
+        color: '#28a745',
+        fontWeight: 'bold',
     },
     modalContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        backgroundColor: 'rgba(0,0,0,0.8)',
+    },
+    fullScreenImage: {
+        width: '90%',
+        height: '80%',
+        borderRadius: 10,
     },
     closeButton: {
+        position: 'absolute',
+        top: 40,
+        right: 20,
         backgroundColor: '#fff',
         padding: 10,
         borderRadius: 5,
-        marginTop: 20,
     },
     closeButtonText: {
-        color: '#007bff',
+        color: '#000',
         fontWeight: 'bold',
-    },
-    replyInput: {
-        flex: 1,
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 5,
-        padding: 10,
-        marginRight: 10,
     },
 });

@@ -22,13 +22,14 @@ import {
 } from "firebase/firestore";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons"; // Import Material Icons
+import { Picker } from '@react-native-picker/picker'; // Import Picker for dropdown
 
 interface Farmer {
     id: string;
     name: string;
     email: string;
-    role: string; // Added role
-    password: string; // Added password
+    role: string;
+    password: string;
 }
 
 const AdminScreen: React.FC = () => {
@@ -37,16 +38,16 @@ const AdminScreen: React.FC = () => {
     const [filteredFarmers, setFilteredFarmers] = useState<Farmer[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-    const [searchQuery, setSearchQuery] = useState<string>(""); // State for search query
-    const [showUsers, setShowUsers] = useState<boolean>(false); // State to control visibility of users list
+    const [searchQuery, setSearchQuery] = useState<string>("");
+    const [showUsers, setShowUsers] = useState<boolean>(false); // Add showUsers state
 
     // Edit Modal states
     const [isEditModalVisible, setEditModalVisible] = useState<boolean>(false);
     const [editUser, setEditUser] = useState<Farmer | null>(null);
     const [editName, setEditName] = useState<string>("");
     const [editEmail, setEditEmail] = useState<string>("");
-    const [editRole, setEditRole] = useState<string>(""); // State for user role
-    const [editPassword, setEditPassword] = useState<string>(""); // State for user password
+    const [editRole, setEditRole] = useState<string>("Farmer"); // Default role
+    const [editPassword, setEditPassword] = useState<string>("");
 
     useEffect(() => {
         const fetchFarmers = async () => {
@@ -58,7 +59,7 @@ const AdminScreen: React.FC = () => {
                     ...doc.data(),
                 })) as Farmer[];
                 setFarmers(farmersList);
-                setFilteredFarmers(farmersList); // Initialize filtered farmers with all farmers
+                setFilteredFarmers(farmersList);
             } catch (err) {
                 console.error("Error fetching farmers: ", err);
                 setError("Failed to load farmers. Please try again later.");
@@ -69,19 +70,6 @@ const AdminScreen: React.FC = () => {
 
         fetchFarmers();
     }, []);
-
-    // Count users by role
-    const countUsersByRole = () => {
-        const counts = { admin: 0, expert: 0, farmer: 0 };
-
-        farmers.forEach((farmer) => {
-            if (farmer.role === "Admin") counts.admin++;
-            else if (farmer.role === "Expert") counts.expert++;
-            else if (farmer.role === "Farmer") counts.farmer++;
-        });
-
-        return counts;
-    };
 
     // Search Functionality
     const handleSearch = (query: string) => {
@@ -94,7 +82,7 @@ const AdminScreen: React.FC = () => {
             );
             setFilteredFarmers(filtered);
         } else {
-            setFilteredFarmers(farmers); // Reset to original list if search query is empty
+            setFilteredFarmers(farmers);
         }
     };
 
@@ -182,7 +170,7 @@ const AdminScreen: React.FC = () => {
             return <Text style={styles.errorText}>{error}</Text>;
         }
 
-        if (farmers.length === 0) {
+        if (filteredFarmers.length === 0) {
             return (
                 <Text style={styles.noFarmersText}>No farmers registered yet.</Text>
             );
@@ -192,7 +180,7 @@ const AdminScreen: React.FC = () => {
             <FlatList
                 data={filteredFarmers}
                 keyExtractor={(item) => item.id}
-                numColumns={2} // Display farmers in a grid format
+                numColumns={1} // Set to 1 for a single row layout
                 renderItem={({ item }) => (
                     <View style={styles.farmerCard}>
                         <Text style={styles.farmerName}>{item.name}</Text>
@@ -219,54 +207,36 @@ const AdminScreen: React.FC = () => {
         );
     };
 
-    const userCounts = countUsersByRole(); // Get counts for rendering
-
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Admin Dashboard</Text>
+            <Text style={styles.title}>Aho Bagenzurira</Text>
 
-            {/* Grid Section */}
             <View style={styles.gridContainer}>
                 <TouchableOpacity
                     style={styles.gridItem}
-                    onPress={() => setShowUsers((prev) => !prev)} // Toggle users list visibility
+                    onPress={() => setShowUsers((prev) => !prev)}
                 >
-                    <Text style={styles.gridText}>Users</Text>
+                    <Text style={styles.gridText}>Imyirondoro</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={styles.gridItem}
                     onPress={() => router.push("/registerexpert")}
                 >
-                    <Text style={styles.gridText}>Register Expert</Text>
+                    <Text style={styles.gridText}>Andikisha Umujyanama</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={styles.gridItem}
                     onPress={() => router.push("/registerfarmer")}
                 >
-                    <Text style={styles.gridText}>Register Farmer</Text>
+                    <Text style={styles.gridText}>Andikisa Umuhinzi</Text>
                 </TouchableOpacity>
             </View>
 
-            {/* Conditionally render the list of users */}
             {showUsers && (
                 <>
-                    {/* Display User Counts */}
-                    <View style={styles.userCountContainer}>
-                        <Text style={styles.userCountText}>
-                            Admins: {userCounts.admin}
-                        </Text>
-                        <Text style={styles.userCountText}>
-                            Experts: {userCounts.expert}
-                        </Text>
-                        <Text style={styles.userCountText}>
-                            Farmers: {userCounts.farmer}
-                        </Text>
-                    </View>
-
-                    {/* Search Input */}
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Search by name or email..."
+                        placeholder="Shakisha Ukoresheje izina Cg Emeyili"
                         value={searchQuery}
                         onChangeText={handleSearch}
                     />
@@ -277,17 +247,16 @@ const AdminScreen: React.FC = () => {
                 </>
             )}
 
-            {/* Edit Modal */}
             <Modal
                 visible={isEditModalVisible}
                 animationType="slide"
                 onRequestClose={() => setEditModalVisible(false)}
             >
                 <View style={styles.modalContainer}>
-                    <Text style={styles.modalTitle}>Edit User</Text>
+                    <Text style={styles.modalTitle}>Vugurura Umwirondoro</Text>
                     <TextInput
                         style={styles.modalInput}
-                        placeholder="Name"
+                        placeholder="Amazina"
                         value={editName}
                         onChangeText={setEditName}
                     />
@@ -297,24 +266,29 @@ const AdminScreen: React.FC = () => {
                         value={editEmail}
                         onChangeText={setEditEmail}
                     />
+                    <Picker
+                        selectedValue={editRole}
+                        style={styles.picker}
+                        onValueChange={(itemValue) => setEditRole(itemValue)}
+                    >
+                        <Picker.Item label="Farmer" value="Farmer" />
+                        <Picker.Item label="Expert" value="Expert" />
+                        <Picker.Item label="Admin" value="Admin" />
+                    </Picker>
                     <TextInput
                         style={styles.modalInput}
-                        placeholder="Role"
-                        value={editRole}
-                        onChangeText={setEditRole}
-                    />
-                    <TextInput
-                        style={styles.modalInput}
-                        placeholder="Password"
+                        placeholder="Ijambo Banga"
                         value={editPassword}
                         onChangeText={setEditPassword}
                         secureTextEntry
                     />
-                    <Button title="Save" onPress={handleEdit} />
-                    <Button
-                        title="Cancel"
-                        onPress={() => setEditModalVisible(false)}
-                    />
+                    <View style={styles.modalActions}>
+                        <Button title="Emeza" onPress={handleEdit} />
+                        <Button
+                            title="Funga"
+                            onPress={() => setEditModalVisible(false)}
+                        />
+                    </View>
                 </View>
             </Modal>
         </View>
@@ -324,25 +298,26 @@ const AdminScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        padding: 20,
+        padding: 16,
         backgroundColor: "#fff",
     },
     title: {
         fontSize: 24,
         fontWeight: "bold",
-        marginBottom: 20,
+        marginBottom: 16,
         textAlign: "center",
     },
     gridContainer: {
         flexDirection: "row",
-        justifyContent: "space-around",
-        marginBottom: 20,
+        justifyContent: "space-between",
+        marginBottom: 16,
     },
     gridItem: {
+        flex: 1,
+        padding: 16,
         backgroundColor: "#4CAF50",
-        padding: 20,
-        borderRadius: 10,
-        width: "30%",
+        borderRadius: 8,
+        margin: 4,
         alignItems: "center",
     },
     gridText: {
@@ -350,24 +325,46 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "bold",
     },
-    userCountContainer: {
-        flexDirection: "row",
-        justifyContent: "space-around",
-        marginBottom: 10,
-    },
-    userCountText: {
-        fontSize: 16,
-    },
     searchInput: {
-        height: 40,
-        borderColor: "#ccc",
         borderWidth: 1,
-        borderRadius: 5,
-        paddingHorizontal: 10,
-        marginBottom: 10,
+        borderColor: "#ccc",
+        borderRadius: 8,
+        padding: 8,
+        marginBottom: 16,
     },
     scrollView: {
         flex: 1,
+    },
+    farmerCard: {
+        backgroundColor: "#f9f9f9",
+        padding: 15,
+        margin: 10,
+        borderRadius: 5,
+        elevation: 1,
+        flexDirection: "column",
+        alignItems: "flex-start",
+    },
+    farmerName: {
+        fontSize: 18,
+        fontWeight: "bold",
+    },
+    farmerEmail: {
+        fontSize: 14,
+        color: "#555",
+    },
+    farmerRole: {
+        fontSize: 14,
+        color: "#555",
+    },
+    actions: {
+        flexDirection: "row",
+        marginTop: 10,
+    },
+    actionButton: {
+        backgroundColor: "#4CAF50",
+        padding: 10,
+        borderRadius: 5,
+        marginRight: 5,
     },
     loader: {
         marginTop: 20,
@@ -380,41 +377,13 @@ const styles = StyleSheet.create({
     noFarmersText: {
         textAlign: "center",
         marginTop: 20,
-    },
-    farmerCard: {
-        backgroundColor: "#f9f9f9",
-        padding: 15,
-        margin: 10,
-        borderRadius: 8,
-        flex: 1,
-        alignItems: "center",
-    },
-    farmerName: {
-        fontSize: 18,
-        fontWeight: "bold",
-    },
-    farmerEmail: {
-        fontSize: 14,
-        color: "#666",
-    },
-    farmerRole: {
-        fontSize: 14,
-        color: "#666",
-    },
-    actions: {
-        flexDirection: "row",
-        marginTop: 10,
-    },
-    actionButton: {
-        backgroundColor: "#4CAF50",
-        padding: 10,
-        borderRadius: 5,
-        marginHorizontal: 5,
+        fontSize: 16,
     },
     modalContainer: {
         flex: 1,
         justifyContent: "center",
         padding: 20,
+        backgroundColor: "#fff",
     },
     modalTitle: {
         fontSize: 20,
@@ -423,12 +392,20 @@ const styles = StyleSheet.create({
         textAlign: "center",
     },
     modalInput: {
-        height: 40,
-        borderColor: "#ccc",
         borderWidth: 1,
-        borderRadius: 5,
-        paddingHorizontal: 10,
-        marginBottom: 10,
+        borderColor: "#ccc",
+        borderRadius: 8,
+        padding: 10,
+        marginBottom: 16,
+    },
+    picker: {
+        height: 50,
+        width: "100%",
+        marginBottom: 16,
+    },
+    modalActions: {
+        flexDirection: "row",
+        justifyContent: "space-between",
     },
 });
 

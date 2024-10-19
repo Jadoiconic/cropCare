@@ -11,6 +11,7 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "@/services/config"; // Adjusted import statement for Firebase
 import { doc, setDoc } from "firebase/firestore"; // Import Firestore methods
 import { useRouter } from "expo-router";
+import React from "react";
 
 const RegisterScreen = () => {
     const router = useRouter();
@@ -37,7 +38,7 @@ const RegisterScreen = () => {
 
             // Navigate to login or another screen after successful registration
             alert("Registration Successful!");
-            router.push("/manages"); 
+            router.push("/home/manages"); 
         } catch (error) {
             alert("Registration failed! " + error.message); // Display error message
         } finally {
@@ -47,12 +48,12 @@ const RegisterScreen = () => {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Register</Text>
+            <Text style={styles.title}>Andikisha Umuhinzi</Text>
             <View style={{ width: "100%", padding: 40 }}>
                 <View style={styles.inputContainer}>
-                    <Text style={styles.label}>First Name</Text>
+                    <Text style={styles.label}>Amazina</Text>
                     <TextInput
-                        placeholder="John"
+                        placeholder="Injiza Amazina"
                         value={newUserName}
                         onChangeText={setNewUserName} // Corrected to update state
                         style={styles.input}
@@ -71,9 +72,9 @@ const RegisterScreen = () => {
                 </View>
 
                 <View style={styles.inputContainer}>
-                    <Text style={styles.label}>Password</Text>
+                    <Text style={styles.label}>Ijambo Banga</Text>
                     <TextInput
-                        placeholder="Password"
+                        placeholder="Ijambo Banga"
                         value={password}
                         onChangeText={setPassword}
                         style={styles.input}
@@ -90,7 +91,7 @@ const RegisterScreen = () => {
                         {loading ? (
                             <ActivityIndicator size={30} color="#fff" />
                         ) : (
-                            <Text style={styles.buttonText}>Register</Text>
+                            <Text style={styles.buttonText}>Emeza</Text>
                         )}
                     </View>
                 </TouchableOpacity>
