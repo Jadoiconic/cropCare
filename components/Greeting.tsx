@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
         marginTop: 10,
     },
     chatButton: {
-        backgroundColor: '#A8E6CE', // White-green color
+        backgroundColor: 'green', // White-green color
         padding: 10,
         borderRadius: 20,
         alignSelf: 'flex-start', // Adjust to align at top right

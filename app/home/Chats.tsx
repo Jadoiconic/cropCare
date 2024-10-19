@@ -198,6 +198,7 @@ const FarmerChatScreen = () => {
 
   const renderMessagesList = () => (
     <FlatList
+    
       data={messages}
       keyExtractor={(item, index) => index.toString()}
       renderItem={({ item }) => (
@@ -226,6 +227,7 @@ const FarmerChatScreen = () => {
       {showChat ? (
         <>
           <View style={styles.chatHeader}>
+            
             <TouchableOpacity onPress={() => setShowChat(false)} style={styles.backButton}>
               <Ionicons name="arrow-back" size={24} color="green" />
             </TouchableOpacity>
@@ -262,16 +264,20 @@ const FarmerChatScreen = () => {
           )}
         </>
       ) : (
+        <><View style={styles.textContainer}>
+            <Text style={styles.text}>Ganira Numujyanama mubuhinzi</Text>
+          </View>
         <FlatList
-          data={experts}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => handleExpertSelect(item)} style={styles.expertCard}>
-              <Text style={styles.expertName}>{item.name}</Text>
-            </TouchableOpacity>
-          )}
-          contentContainerStyle={styles.expertListContainer}
-        />
+
+            data={experts}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <>
+                <TouchableOpacity onPress={() => handleExpertSelect(item)} style={styles.expertCard}>
+                  <Text style={styles.expertName}>{item.name}</Text>
+                </TouchableOpacity></>
+            )}
+            contentContainerStyle={styles.expertListContainer} /></>
       )}
     </SafeAreaView>
   );
@@ -399,6 +405,26 @@ const styles = StyleSheet.create({
   closeButtonText: {
     color: '#fff',
     fontSize: 16,
+  },
+  textContainer: {
+    backgroundColor: '#f0f0f0', // Light background for contrast
+    padding: 16, // Add some padding around the text
+    borderRadius: 8, // Rounded corners for a softer look
+    margin: 16, // Add margin around the container
+    shadowColor: '#000', // Shadow for depth
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2, // Android shadow
+  },
+  text: {
+    fontSize: 20, // Increased font size for readability
+    fontWeight: 'bold', // Bold text for emphasis
+    color: '#333', // Darker color for contrast
+    textAlign: 'center', // Center text
   },
 });
 
