@@ -1,3 +1,4 @@
+// app/components/Weather.tsx
 import React, { useState, useEffect } from 'react';
 import {
     View,
@@ -8,6 +9,7 @@ import {
     ActivityIndicator,
 } from 'react-native';
 import * as Location from 'expo-location';
+import { fetchWeatherData, fetchStoredWeatherData, storeWeatherData } from '../services/weatherService'; // Import your weather service
 
 const Weather: React.FC = () => {
     const apiKey = '646e427364d976db752529e161940cd0'; // Replace with your API key
@@ -33,26 +35,21 @@ const Weather: React.FC = () => {
 
             // Fetch address from coordinates
             await getAddressFromCoordinates(latitude, longitude);
-            // Fetch weather data
-            fetchWeatherData(latitude, longitude);
+
+            // Fetch weather data and store it
+            const data = await fetchWeatherData(latitude, longitude);
+            if (data) {
+                setWeatherData(data);
+                await storeWeatherData(data); // Store the fetched data
+            } else {
+                // If fetching live data fails, get the stored data
+                const storedData = await fetchStoredWeatherData();
+                if (storedData) {
+                    setWeatherData(storedData);
+                }
+            }
         } catch (error) {
             setLocationMessage('Could not fetch location. Please enable location services.');
-        }
-    };
-
-    // Fetch weather data based on coordinates using One Call API
-    const fetchWeatherData = async (lat: number, lon: number) => {
-        try {
-            const response = await fetch(
-                `https://api.openweathermap.org/data/2.5/onecall?lat=${lat}&lon=${lon}&exclude=minutely,hourly&appid=${apiKey}&units=metric`
-            );
-            if (!response.ok) {
-                throw new Error('Failed to fetch weather data');
-            }
-            const data = await response.json();
-            setWeatherData(data);
-        } catch (error) {
-            setLocationMessage('Failed to fetch weather data. Please try again later.');
         }
     };
 

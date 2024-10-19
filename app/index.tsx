@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Stack, Redirect } from 'expo-router';
+import PlantingSchedule from './home/crop-management/PlantingSchedule';
 
 const App = () => {
   return (

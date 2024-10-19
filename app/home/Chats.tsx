@@ -14,6 +14,7 @@ import {
   Modal,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as MediaLibrary from 'expo-media-library'; // Import MediaLibrary
 import { collection, query, onSnapshot, addDoc, Timestamp, orderBy, where } from 'firebase/firestore';
 import { db, auth, storage } from '@/services/config';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,8 +47,17 @@ const FarmerChatScreen = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
+    requestMediaLibraryPermission(); // Request permission on mount
     fetchExperts();
   }, []);
+
+  // Function to request media library permissions
+  const requestMediaLibraryPermission = async () => {
+    const { status } = await MediaLibrary.requestPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Permission to access camera roll is required!');
+    }
+  };
 
   const fetchExperts = () => {
     const expertsQuery = query(collection(db, 'farmers'), where('role', '==', 'Expert'));
@@ -256,11 +266,11 @@ const FarmerChatScreen = () => {
           data={experts}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => handleExpertSelect(item)} style={styles.expertItem}>
-              <Text>{item.name}</Text>
+            <TouchableOpacity onPress={() => handleExpertSelect(item)} style={styles.expertCard}>
+              <Text style={styles.expertName}>{item.name}</Text>
             </TouchableOpacity>
           )}
-          contentContainerStyle={styles.expertList}
+          contentContainerStyle={styles.expertListContainer}
         />
       )}
     </SafeAreaView>
@@ -268,27 +278,129 @@ const FarmerChatScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  chatHeader: { flexDirection: 'row', alignItems: 'center', padding: 10, backgroundColor: '#f0f0f0' },
-  backButton: { marginRight: 10 },
-  expertName: { fontSize: 18, fontWeight: 'bold' },
-  inputContainer: { flexDirection: 'row', alignItems: 'center', padding: 10, backgroundColor: '#fff' },
-  messageInput: { flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 20, padding: 10, marginRight: 10 },
-  imagePickerButton: { marginRight: 10 },
-  sendButton: { backgroundColor: 'green', padding: 10, borderRadius: 50 },
-  messagesList: { flex: 1 },
-  messagesContainer: { padding: 10 },
-  messageCard: { padding: 10, borderRadius: 8, marginBottom: 10 },
-  userMessage: { alignSelf: 'flex-end', backgroundColor: '#dcf8c6' },
-  otherMessage: { alignSelf: 'flex-start', backgroundColor: '#f0f0f0' },
-  timestamp: { fontSize: 10, color: '#555', marginTop: 5 },
-  expertItem: { padding: 20, borderBottomWidth: 1, borderBottomColor: '#ccc' },
-  imageMessage: { width: 150, height: 150, marginTop: 10 },
-  previewImage: { width: 30, height: 30, borderRadius: 15 },
-  modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.8)' },
-  fullScreenImage: { width: '90%', height: '70%' },
-  closeButton: { position: 'absolute', top: 30, right: 30, padding: 10, backgroundColor: 'green', borderRadius: 20 },
-  closeButtonText: { color: '#fff', fontSize: 16 },
+  container: {
+    flex: 1,
+    backgroundColor: '#f9f9f9',
+  },
+  chatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  backButton: {
+    marginRight: 10,
+  },
+  expertName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  messagesList: {
+    flex: 1,
+    padding: 10,
+    backgroundColor: '#f1f1f1',
+  },
+  messagesContainer: {
+    paddingBottom: 20,
+  },
+  messageCard: {
+    borderRadius: 10,
+    padding: 10,
+    marginVertical: 5,
+    maxWidth: '80%',
+  },
+  userMessage: {
+    backgroundColor: '#d1f8d3',
+    alignSelf: 'flex-end',
+  },
+  otherMessage: {
+    backgroundColor: '#f0f0f0',
+    alignSelf: 'flex-start',
+  },
+  imageMessage: {
+    width: 150,
+    height: 150,
+    borderRadius: 10,
+    marginVertical: 5,
+  },
+  timestamp: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 5,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
+  },
+  messageInput: {
+    flex: 1,
+    padding: 10,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginRight: 10,
+  },
+  imagePickerButton: {
+    marginRight: 10,
+  },
+  sendButton: {
+    backgroundColor: 'green',
+    padding: 10,
+    borderRadius: 20,
+  },
+  previewImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 5,
+    marginRight: 10,
+  },
+  expertCard: {
+    backgroundColor: '#fff',
+    padding: 15,
+    marginVertical: 10,
+    marginHorizontal: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  expertListContainer: {
+    paddingTop: 20,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullScreenImage: {
+    width: '90%',
+    height: '70%',
+    borderRadius: 10,
+  },
+  closeButton: {
+    marginTop: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: 'red',
+    borderRadius: 20,
+  },
+  closeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+  },
 });
+
 
 export default FarmerChatScreen;

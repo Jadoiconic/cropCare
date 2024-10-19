@@ -14,7 +14,7 @@ import {
   Modal,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { collection, query, onSnapshot, addDoc, Timestamp, orderBy, where } from 'firebase/firestore'; 
+import { collection, query, onSnapshot, addDoc, Timestamp, orderBy, where, updateDoc, doc } from 'firebase/firestore'; 
 import { db, auth, storage } from '@/services/config';
 import { Ionicons } from '@expo/vector-icons';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
@@ -22,6 +22,7 @@ import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 interface Farmer {
   id: string;
   name: string;
+  unreadCount: number;
 }
 
 interface Message {
@@ -29,6 +30,7 @@ interface Message {
   imageUrl?: string;
   timestamp: Timestamp;
   sender: string;
+  read: boolean;
 }
 
 const ExpertChatScreen = () => {
@@ -47,15 +49,36 @@ const ExpertChatScreen = () => {
 
   useEffect(() => {
     fetchFarmers();
+    requestCameraRollPermission(); // Request permission on mount
   }, []);
+
+  const requestCameraRollPermission = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted) {
+      Alert.alert('Permission required', 'Permission to access camera roll is required!');
+    }
+  };
 
   const fetchFarmers = () => {
     const farmersQuery = query(collection(db, 'farmers'), where('role', '==', 'Farmer'));
-    const unsubscribe = onSnapshot(farmersQuery, (snapshot) => {
-      const farmerList = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Farmer[];
+    const unsubscribe = onSnapshot(farmersQuery, async (snapshot) => {
+      const farmerList: Farmer[] = await Promise.all(snapshot.docs.map(async (doc) => {
+        const farmerData = { id: doc.id, ...doc.data() } as Farmer;
+
+        // Fetch unread messages count for each farmer
+        const generatedChatId = generateChatId(user?.uid ?? '', farmerData.id);
+        const unreadMessagesQuery = query(
+          collection(db, `chats/${generatedChatId}/messages`),
+          where('read', '==', false),
+          where('sender', '!=', user?.uid) // Exclude messages sent by the current user
+        );
+        const unreadMessagesSnapshot = await onSnapshot(unreadMessagesQuery, (unreadSnapshot) => {
+          farmerData.unreadCount = unreadSnapshot.size;
+        });
+
+        return farmerData;
+      }));
+
       setFarmers(farmerList);
     }, (error) => {
       console.error('Error fetching farmers:', error);
@@ -84,10 +107,21 @@ const ExpertChatScreen = () => {
 
   const fetchMessages = (chatId: string) => {
     setLoadingMessages(true);
-    const messagesQuery = query(collection(db, `chats/${chatId}/messages`), orderBy('timestamp', 'asc'));
+    const messagesQuery = query(
+      collection(db, `chats/${chatId}/messages`),
+      orderBy('timestamp', 'desc') // Fetch newest messages first
+    );
     const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
       const messagesList = snapshot.docs.map((doc) => doc.data() as Message);
       setMessages(messagesList);
+
+      // Mark messages as read after fetching
+      snapshot.docs.forEach(async (doc) => {
+        if (doc.data().sender !== user?.uid && !doc.data().read) {
+          await updateDoc(doc.ref, { read: true });
+        }
+      });
+
       setLoadingMessages(false);
     }, (error) => {
       console.error('Error fetching messages:', error);
@@ -116,6 +150,7 @@ const ExpertChatScreen = () => {
         text: message ? message.trim() : undefined,
         timestamp: Timestamp.now(),
         sender: user.uid,
+        read: false, // Mark as unread initially
       };
 
       if (image) {
@@ -136,12 +171,6 @@ const ExpertChatScreen = () => {
   };
 
   const handleImagePick = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permissionResult.granted) {
-      Alert.alert('Permission required', 'Permission to access camera roll is required!');
-      return;
-    }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 1,
@@ -196,6 +225,7 @@ const ExpertChatScreen = () => {
       )}
       style={styles.messagesList}
       contentContainerStyle={styles.messagesContainer}
+      inverted // Ensures new messages appear at the top
     />
   );
 
@@ -207,38 +237,37 @@ const ExpertChatScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       {showChat ? (
-        <View style={styles.chatContainer}>
-          <TouchableOpacity onPress={() => setShowChat(false)} style={styles.backButton}>
+        <>
+          <TouchableOpacity style={styles.backButton} onPress={() => setShowChat(false)}>
             <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
-          <Text style={styles.header}>Chat with {selectedFarmer?.name}</Text>
-          {renderMessagesList()}
-          {loadingMessages && <ActivityIndicator size="large" color="#0000ff" />}
+          <Text style={styles.header}>Your Conversation with {selectedFarmer?.name}</Text>
+
+          {loadingMessages ? (
+            <ActivityIndicator size="large" color="#000" />
+          ) : (
+            renderMessagesList()
+          )}
+
           <View style={styles.inputContainer}>
             <TextInput
-              placeholder="Write your message..."
+              style={styles.input}
               value={message}
               onChangeText={setMessage}
-              style={styles.input}
-              multiline={true}
-              placeholderTextColor="#888" // Placeholder color for better readability
+              placeholder="Type your message..."
             />
-            <TouchableOpacity
-              onPress={handleImagePick}
-              style={styles.iconButton}
-            >
-              <Ionicons name="image" size={24} color={image ? '#4CAF50' : '#2196F3'} />
+            <TouchableOpacity style={styles.iconButton} onPress={handleImagePick}>
+              <Ionicons name="image-outline" size={24} color="#000" />
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={sendMessage}
-              style={styles.iconButton}
-              disabled={sendingMessage || (!message && !image)}
-            >
-              <Ionicons name="send" size={24} color={sendingMessage || (!message && !image) ? '#ccc' : '#4CAF50'} />
+            <TouchableOpacity style={styles.iconButton} onPress={sendMessage} disabled={sendingMessage}>
+              <Ionicons name="send-outline" size={24} color="#000" />
             </TouchableOpacity>
           </View>
-          {image && <Image source={{ uri: image }} style={styles.previewImage} />}
-        </View>
+
+          {image && (
+            <Image source={{ uri: image }} style={styles.previewImage} />
+          )}
+        </>
       ) : (
         <FlatList
           data={farmers}
@@ -246,16 +275,21 @@ const ExpertChatScreen = () => {
           renderItem={({ item }) => (
             <TouchableOpacity style={styles.farmerCard} onPress={() => handleFarmerSelect(item)}>
               <Text>{item.name}</Text>
+              {item.unreadCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{item.unreadCount}</Text>
+                </View>
+              )}
             </TouchableOpacity>
           )}
           contentContainerStyle={styles.farmerListContainer}
         />
       )}
 
-      <Modal visible={modalVisible} transparent={true}>
+      <Modal visible={modalVisible} transparent>
         <View style={styles.modalContainer}>
           <Image source={{ uri: selectedImage }} style={styles.fullScreenImage} />
-          <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
+          <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
             <Text style={styles.closeButtonText}>Close</Text>
           </TouchableOpacity>
         </View>
@@ -265,126 +299,31 @@ const ExpertChatScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f8f8',
-    paddingTop: 20,
-  },
-  chatContainer: {
-    flex: 1,
-  },
-  backButton: {
-    padding: 10,
-    backgroundColor: '#4CAF50',
-    borderRadius: 5,
-  },
-  backButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  header: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginVertical: 10,
-  },
-  messagesList: {
-    flex: 1,
-    paddingHorizontal: 10,
-    paddingBottom: 10,
-  },
-  messagesContainer: {
-    paddingBottom: 100, // Add padding to prevent overlap with the input
-  },
-  messageCard: {
-    padding: 10,
-    marginVertical: 5,
-    borderRadius: 10,
-    maxWidth: '80%',
-  },
-  userMessage: {
-    backgroundColor: '#d1e7dd',
-    alignSelf: 'flex-end',
-  },
-  otherMessage: {
-    backgroundColor: '#f1f1f1',
-    alignSelf: 'flex-start',
-  },
-  messageText: {
-    fontSize: 16,
-  },
-  imageMessage: {
-    width: 100,
-    height: 100,
-    borderRadius: 10,
-    marginVertical: 5,
-    alignSelf: 'center',
-  },
-  timestamp: {
-    fontSize: 10,
-    color: '#888',
-    marginTop: 5,
-    alignSelf: 'flex-end',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#ccc',
-    backgroundColor: '#fff',
-  },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    padding: 10,
-    marginRight: 10,
-    backgroundColor: '#f9f9f9', // Light background for input field
-  },
-  iconButton: {
-    padding: 10,
-  },
-  previewImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 10,
-    marginVertical: 5,
-    alignSelf: 'flex-end',
-  },
-  farmerCard: {
-    padding: 15,
-    marginVertical: 5,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    elevation: 2,
-  },
-  farmerListContainer: {
-    padding: 10,
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  fullScreenImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'contain',
-  },
-  closeButton: {
-    position: 'absolute',
-    bottom: 20,
-    padding: 10,
-    backgroundColor: '#4CAF50',
-    borderRadius: 5,
-  },
-  closeButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
+  container: { flex: 1, padding: 10 },
+  chatContainer: { flex: 1 },
+  header: { fontSize: 18, fontWeight: 'bold', textAlign: 'center', marginBottom: 10 },
+  backButton: { padding: 10, backgroundColor: '#f0f0f0', alignSelf: 'flex-start', borderRadius: 5 },
+  backButtonText: { color: '#000', fontSize: 16 },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', padding: 10 },
+  input: { flex: 1, backgroundColor: '#f0f0f0', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5, marginRight: 5 },
+  iconButton: { padding: 5 },
+  previewImage: { width: 100, height: 100, margin: 10 },
+  messagesList: { flex: 1 },
+  messagesContainer: { paddingBottom: 50 },
+  messageCard: { marginVertical: 5, padding: 10, borderRadius: 10 },
+  userMessage: { backgroundColor: '#e0ffe0', alignSelf: 'flex-end' },
+  otherMessage: { backgroundColor: '#e0f0ff', alignSelf: 'flex-start' },
+  messageText: { fontSize: 16 },
+  imageMessage: { width: 200, height: 200, marginTop: 5 },
+  timestamp: { fontSize: 12, color: '#888', textAlign: 'right' },
+  farmerCard: { padding: 10, backgroundColor: '#f0f0f0', marginVertical: 5, borderRadius: 10 },
+  farmerListContainer: { paddingVertical: 10 },
+  badge: { backgroundColor: 'red', borderRadius: 12, paddingHorizontal: 6, paddingVertical: 2, position: 'absolute', right: 10, top: 10 },
+  badgeText: { color: 'white', fontWeight: 'bold', fontSize: 12 },
+  modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.8)' },
+  fullScreenImage: { width: '100%', height: '80%' },
+  closeButton: { position: 'absolute', top: 30, right: 20, padding: 10, backgroundColor: '#f0f0f0', borderRadius: 10 },
+  closeButtonText: { color: '#000', fontSize: 16 },
 });
 
 export default ExpertChatScreen;

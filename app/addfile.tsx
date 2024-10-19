@@ -113,14 +113,8 @@ export default function UploadScreen() {
         setUploadSuccess(true);
         Alert.alert("Success", "PDF uploaded successfully!");
 
-        // Fetch updated files
         fetchFiles();
-
-        setTitle("");
-        setDescription("");
-        setFileName("");
-        setFileSize("");
-        setFileType("");
+        resetForm();
       } else {
         Alert.alert("Upload Error", "No file selected or upload failed.");
       }
@@ -132,7 +126,7 @@ export default function UploadScreen() {
     }
   };
 
-  const deleteFile = async (fileId) => {
+  const deleteFile = async (fileId: string) => {
     try {
       await deleteDoc(doc(db, "pdfFiles", fileId));
       Alert.alert("Success", "File deleted successfully!");
@@ -143,7 +137,15 @@ export default function UploadScreen() {
     }
   };
 
-  const renderFileItem = ({ item }) => (
+  const resetForm = () => {
+    setTitle("");
+    setDescription("");
+    setFileName("");
+    setFileSize("");
+    setFileType("");
+  };
+
+  const renderFileItem = ({ item }: { item: any }) => (
     <View style={styles.fileCard}>
       <Text style={styles.fileTitle}>{item.title}</Text>
       <Text style={styles.fileInfo}>Size: {item.size} bytes</Text>
@@ -174,13 +176,13 @@ export default function UploadScreen() {
         numberOfLines={3}
       />
 
-      {fileName ? (
+      {fileName && (
         <View>
           <Text style={styles.filePreview}>Selected File: {fileName}</Text>
           <Text style={styles.fileInfo}>Size: {fileSize} bytes</Text>
           <Text style={styles.fileInfo}>Type: {fileType}</Text>
         </View>
-      ) : null}
+      )}
 
       <TouchableOpacity style={styles.uploadButton} onPress={uploadPdf}>
         {loading ? (
@@ -190,9 +192,7 @@ export default function UploadScreen() {
         )}
       </TouchableOpacity>
 
-      {uploadSuccess && (
-        <Text style={styles.successMessage}>PDF uploaded successfully!</Text>
-      )}
+      {uploadSuccess && <Text style={styles.successMessage}>PDF uploaded successfully!</Text>}
 
       <Text style={styles.existingFilesTitle}>Existing Files</Text>
       <FlatList
@@ -200,7 +200,7 @@ export default function UploadScreen() {
         renderItem={renderFileItem}
         keyExtractor={(item) => item.id}
         style={styles.filesList}
-        numColumns={1} // Changed to 1 for a single-column layout
+        numColumns={1}
       />
     </View>
   );
@@ -273,10 +273,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "#fff",
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 5,

@@ -1,157 +1,159 @@
-// Notification.tsx
+import React, { useEffect, useState } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    FlatList,
+    ActivityIndicator,
+    Button,
+} from 'react-native';
+import { auth, db } from '@/services/config';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert, FlatList, ScrollView } from 'react-native';
-import * as Notifications from 'expo-notifications';
-import { auth } from '@/services/config';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { onAuthStateChanged } from 'firebase/auth';
-import { useRouter } from 'expo-router';
+const ScheduledReminders: React.FC = () => {
+    const [reminders, setReminders] = useState<any[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null); // Error state
 
-const Notification: React.FC = () => {
-    const [userId, setUserId] = useState<string | null>(null);
-    const [scheduleList, setScheduleList] = useState<any[]>([]);
-
-    const router = useRouter();
-
-    // Request notification permissions and load local schedule on component mount
     useEffect(() => {
-        const requestPermissions = async () => {
-            const { status } = await Notifications.getPermissionsAsync();
-            if (status !== 'granted') {
-                Alert.alert('Notification Error', 'Please enable notifications in your settings.');
+        const fetchReminders = async () => {
+            try {
+                const userId = auth.currentUser?.uid;
+                const remindersRef = collection(db, 'PlantingSchedules');
+                const q = query(remindersRef, where('userId', '==', userId));
+
+                const unsubscribe = onSnapshot(q, (querySnapshot) => {
+                    const schedules: any[] = [];
+                    querySnapshot.forEach((doc) => {
+                        schedules.push({ id: doc.id, ...doc.data() });
+                    });
+
+                    setReminders(schedules);
+                    setLoading(false);
+                }, (error) => {
+                    setError(error.message);
+                    setLoading(false);
+                });
+
+                // Clean up the listener on unmount
+                return () => unsubscribe();
+            } catch (err) {
+                setError((err as Error).message);
+                setLoading(false);
             }
         };
-        requestPermissions();
-        loadLocalSchedule();
+
+        fetchReminders();
     }, []);
 
-    // Check authentication state
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            if (user) {
-                setUserId(user.uid);
-            } else {
-                setUserId(null);
-                router.replace('/auth'); // Redirect to authentication if user is not logged in
-            }
-        });
-        return () => unsubscribe();
-    }, []);
+    // Function to calculate next action date based on planting date and predefined intervals
+    const calculateNextActionDate = (plantingDate: string, cropType: string) => {
+        const date = new Date(plantingDate);
+        let nextActionDays = 0;
 
-    // Load local planting schedule from AsyncStorage
-    const loadLocalSchedule = async () => {
-        try {
-            const localSchedule = await AsyncStorage.getItem('localPlantingSchedule');
-            if (localSchedule) {
-                const scheduleData = JSON.parse(localSchedule);
-                if (Array.isArray(scheduleData)) {
-                    const formattedSchedules = scheduleData.map(item => ({
-                        ...item,
-                        plantingDate: new Date(item.plantingDate),
-                        actionPerformedDate: new Date(item.actionPerformedDate),
-                    }));
-                    // Sort schedules by planting date
-                    formattedSchedules.sort((a, b) => b.plantingDate.getTime() - a.plantingDate.getTime());
-                    setScheduleList(formattedSchedules);
-                }
-            }
-        } catch (error) {
-            console.error('Failed to load local schedule:', error);
-            Alert.alert('Error', 'Failed to load planting schedules.');
+        // Define action intervals based on crop type or predefined actions
+        if (cropType === 'Potatoes') {
+            nextActionDays = 30; // Example: fertilize after 30 days for potatoes
+        } else if (cropType === 'Maize') {
+            nextActionDays = 40; // Example: weed control after 40 days for maize
+        } else {
+            nextActionDays = 20; // Default action after 20 days
         }
+
+        const nextActionDate = new Date(date);
+        nextActionDate.setDate(date.getDate() + nextActionDays);
+        return nextActionDate.toLocaleDateString();
     };
 
-    // Format date to a readable string
-    const formatDate = (date: Date | null) => {
-        return date ? date.toDateString() : 'N/A';
-    };
-
-    // Calculate remaining days until a specific date
-    const calculateRemainingDays = (targetDate: Date) => {
-        const today = new Date();
-        const timeDifference = targetDate.getTime() - today.getTime();
-        const remainingDays = Math.ceil(timeDifference / (1000 * 60 * 60 * 24));
-        return remainingDays >= 0 ? remainingDays : 'Expired';
-    };
+    const renderReminderItem = ({ item }: { item: any }) => (
+        <View style={styles.reminderItem}>
+            <Text style={styles.reminderText}>Crop: {item.cropName}</Text>
+            <Text style={styles.reminderText}>Farm: {item.farmName}</Text>
+            <Text style={styles.reminderText}>Actions: {item.performedActions}</Text>
+            <Text style={styles.reminderText}>
+                Planting Date: {new Date(item.plantingDate).toLocaleDateString()}
+            </Text>
+            <Text style={styles.reminderText}>
+                Next Action Date: {calculateNextActionDate(item.plantingDate, item.cropName)}
+            </Text>
+        </View>
+    );
 
     return (
-        <ScrollView style={styles.container}>
-            <Text style={styles.title}>Remaining Schedules</Text>
-            {/* Display planting schedules */}
-            {scheduleList.length > 0 && (
-                <View style={styles.tableContainer}>
-                    <FlatList
-                        data={scheduleList.filter(item => calculateRemainingDays(item.plantingDate) <= 2)} // Only show schedules for the next 2 days
-                        keyExtractor={(item, index) => index.toString()}
-                        renderItem={({ item }) => (
-                            <View style={styles.tableRow}>
-                                <Text style={styles.tableCell}>
-                                    
-                                    <Text style={styles.label}>Crop: </Text>
-                                    {item.cropName || 'N/A'}
-                                </Text>
-                                <Text style={styles.tableCell}>
-                                    <Text style={styles.label}>Planted on: </Text>
-                                    {formatDate(item.plantingDate) || 'N/A'}
-                                </Text>
-                                <Text style={styles.tableCell}>
-                                    <Text style={styles.label}>Location: </Text>
-                                    {item.farmName || 'N/A'}
-                                </Text>
-                                <Text style={styles.tableCell}>
-                                    <Text style={styles.label}>Action: </Text>
-                                    {item.performedActions || 'N/A'}
-                                </Text>
-                                <Text style={styles.tableCell}>
-                                    <Text style={styles.label}>Performed on: </Text>
-                                    {formatDate(item.actionPerformedDate) || 'N/A'}
-                                </Text>
-                                <Text style={styles.tableCell}>
-                                    <Text style={styles.label}>Status: </Text>
-                                    {item.status || 'N/A'}
-                                </Text>
-                                <Text style={styles.tableCell}>
-                                    <Text style={styles.label}>Duration: </Text>
-                                    {calculateRemainingDays(item.plantingDate) !== 'Expired'
-                                        ? `${calculateRemainingDays(item.plantingDate)} days remaining`
-                                        : 'Expired'}
-                                </Text>
-                            </View>
-                        )}
-                    />
+        <View style={styles.container}>
+            <Text style={styles.title}>Scheduled Reminders</Text>
+            {loading ? (
+                <ActivityIndicator size="large" color="#007bff" style={styles.loadingIndicator} />
+            ) : error ? (
+                <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>Error: {error}</Text>
+                    <Button title="Retry" onPress={() => {
+                        setLoading(true);
+                        setError(null);
+                        // Optionally, re-fetch reminders
+                        fetchReminders();
+                    }} />
                 </View>
+            ) : reminders.length === 0 ? (
+                <Text style={styles.emptyText}>No scheduled reminders found.</Text>
+            ) : (
+                <FlatList
+                    data={reminders}
+                    keyExtractor={(item) => item.id}
+                    renderItem={renderReminderItem}
+                    contentContainerStyle={styles.listContainer}
+                />
             )}
-        </ScrollView>
+        </View>
     );
 };
 
-export default Notification;
-
-// Styles for the component
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 20, backgroundColor: '#E5F4E3' },
-    title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
-    tableContainer: { marginTop: 20, backgroundColor: '#FFF3E0', borderRadius: 10, padding: 10 },
-    tableRow: {
-        flexDirection: 'column',
-        padding: 10,
-        marginVertical: 5,
-        backgroundColor: '#f8f8f8',
-        borderRadius: 8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,  // For Android shadow
+    container: {
+        padding: 20,
+        flex: 1,
+        backgroundColor: '#f9f9f9',
     },
-    tableCell: {
-        fontSize: 16,
-        paddingVertical: 4,
+    title: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        textAlign: 'center',
+        marginBottom: 20,
         color: '#333',
     },
-    label: {
-        fontWeight: 'bold',
-        color: '#666',
+    loadingIndicator: {
+        marginVertical: 20,
+    },
+    reminderItem: {
+        padding: 15,
+        borderColor: '#ddd',
+        borderWidth: 1,
+        borderRadius: 8,
+        marginVertical: 5,
+        backgroundColor: '#fff',
+    },
+    reminderText: {
+        fontSize: 16,
+        color: '#555',
+    },
+    errorContainer: {
+        alignItems: 'center',
+        marginVertical: 20,
+    },
+    errorText: {
+        color: 'red',
+        textAlign: 'center',
+        marginBottom: 10,
+    },
+    emptyText: {
+        textAlign: 'center',
+        fontSize: 18,
+        color: '#888',
+        marginTop: 20,
+    },
+    listContainer: {
+        paddingBottom: 20,
     },
 });
+
+export default ScheduledReminders;

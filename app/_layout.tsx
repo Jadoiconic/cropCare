@@ -7,6 +7,7 @@ import CustomDrawerContent from '@/components/CustomDrawerContent';
 import { useState, useEffect } from 'react';
 import { Stack, useRouter } from 'expo-router';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import React from 'react';
 export default function Layout() {
   const [user, setUser] = useState<Object | null>(null);  // Initially, user is null (not authenticated)
   const router = useRouter();  // To perform navigation
@@ -155,6 +156,7 @@ export default function Layout() {
           }} 
         />
       </Drawer>
+      
       
     </GestureHandlerRootView>
   );

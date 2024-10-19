@@ -1,15 +1,15 @@
+import React, { useEffect, useState } from "react";
 import {
     StyleSheet,
     Text,
     View,
     TouchableOpacity,
     ActivityIndicator,
+    TextInput,
 } from "react-native";
-import { TextInput } from "react-native-gesture-handler";
-import { useEffect, useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth, db } from "@/services/config"; // Import Firebase configuration
 import { useRouter } from "expo-router";
+import { auth, db } from "@/services/config"; // Import Firebase configuration
 import { doc, getDoc } from "firebase/firestore"; // Import Firestore methods
 
 const SignInScreen = () => {
@@ -25,34 +25,35 @@ const SignInScreen = () => {
                 handleRoleRedirect(user.uid);
             }
         });
-        return () => unsubscribe(); // Cleanup subscription
-    }, [router]);
+        return unsubscribe; // Cleanup subscription on unmount
+    }, []);
 
     // Function to redirect user based on role
     const handleRoleRedirect = async (uid: string) => {
-        const docRef = doc(db, "farmers", uid); // Reference to user's Firestore document
-        const docSnap = await getDoc(docRef);
+        try {
+            const docRef = doc(db, "farmers", uid); // Reference to user's Firestore document
+            const docSnap = await getDoc(docRef);
 
-        if (docSnap.exists()) {
-            const userData = docSnap.data();
-            const role = userData.role; // Get the role from the document
-
-            // Navigate based on user role
-            switch (role) {
-                case "Admin":
-                    router.navigate("/home/admin_home"); // Admin dashboard
-                    break;
-                case "Expert":
-                    router.navigate("/home/expert_home"); // Expert dashboard
-                    break;
-                case "Farmer":
-                    router.navigate("/home/"); // Farmer dashboard
-                    break;
-                default:
-                    alert("Role not recognized!"); // Handle unrecognized roles
+            if (docSnap.exists()) {
+                const { role } = docSnap.data(); // Extract role from document data
+                switch (role) {
+                    case "Admin":
+                        router.navigate("/home/");
+                        break;
+                    case "Expert":
+                        router.navigate("/home/");
+                        break;
+                    case "Farmer":
+                        router.navigate("/home/");
+                        break;
+                    default:
+                        alert("Role not recognized!");
+                }
+            } else {
+                alert("User does not exist in the database!");
             }
-        } else {
-            alert("User does not exist in the database!");
+        } catch (error) {
+            alert("Failed to retrieve user data.");
         }
     };
 
@@ -62,19 +63,19 @@ const SignInScreen = () => {
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             if (userCredential) {
-                handleRoleRedirect(userCredential.user.uid); // Check role after login
+                handleRoleRedirect(userCredential.user.uid); // Redirect after login
             }
         } catch (error) {
-            alert("Invalid Email or Password!"); // Display error message
+            alert("Invalid Email or Password!");
         } finally {
-            setLoading(false); // Reset loading state
+            setLoading(false);
         }
     };
 
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Welcome to Crop Care</Text>
-            <View style={{ width: "100%", padding: 40 }}>
+            <View style={styles.form}>
                 <View style={styles.inputContainer}>
                     <Text style={styles.label}>Email</Text>
                     <TextInput
@@ -111,20 +112,16 @@ const SignInScreen = () => {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                    style={{ marginTop: 10 }}
+                    style={styles.forgotPassword}
                     onPress={() => {
                         // Handle forgot password action here
                     }}
                 >
-                    <Text style={[styles.buttonText, { color: "green", textAlign: "right" }]}>
-                        Forgot Password?
-                    </Text>
+                    <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={() => router.push("/auth/Register")}>
-                    <Text style={{ color: "blue", textAlign: "center" }}>
-                        Don't have an account? Register here
-                    </Text>
+                    <Text style={styles.registerText}>Don't have an account? Register here</Text>
                 </TouchableOpacity>
             </View>
         </View>
@@ -133,11 +130,18 @@ const SignInScreen = () => {
 
 const styles = StyleSheet.create({
     container: {
-        marginTop: 20,
+        flex: 1,
         backgroundColor: "#fff",
         alignItems: "center",
         justifyContent: "center",
-        height: "100%",
+        paddingHorizontal: 20,
+    },
+    form: {
+        width: "100%",
+        padding: 40,
+    },
+    inputContainer: {
+        marginBottom: 15,
     },
     input: {
         width: "100%",
@@ -146,18 +150,17 @@ const styles = StyleSheet.create({
         borderColor: "gray",
         borderRadius: 5,
         paddingHorizontal: 20,
-        fontSize: 20,
+        fontSize: 16,
     },
     label: {
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: "bold",
-    },
-    inputContainer: {
-        paddingBottom: 10,
+        marginBottom: 5,
     },
     title: {
-        fontSize: 30,
+        fontSize: 28,
         fontWeight: "bold",
+        marginBottom: 20,
     },
     button: {
         paddingVertical: 15,
@@ -167,9 +170,21 @@ const styles = StyleSheet.create({
     },
     buttonText: {
         fontWeight: "bold",
-        fontSize: 20,
+        fontSize: 18,
         color: "white",
         textAlign: "center",
+    },
+    forgotPassword: {
+        marginTop: 10,
+    },
+    forgotPasswordText: {
+        color: "green",
+        textAlign: "right",
+    },
+    registerText: {
+        color: "blue",
+        textAlign: "center",
+        marginTop: 20,
     },
 });
 

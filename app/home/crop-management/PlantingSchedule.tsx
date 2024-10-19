@@ -1,279 +1,180 @@
-import React, { useState, useEffect } from 'react';
-import {
-    View,
-    Text,
-    StyleSheet,
-    Button,
-    Alert,
-    TouchableOpacity,
-    TextInput,
-    FlatList,
-    ScrollView,
-    ActivityIndicator,
-    ProgressBarAndroid,
-} from 'react-native';
-import * as Notifications from 'expo-notifications';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { auth, db } from '@/services/config';
-import { collection, addDoc, query, where, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
+// app/screens/Home.tsx
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Button, ScrollView, ActivityIndicator } from 'react-native';
+import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import moment from 'moment';
 
-const PlantingSchedule: React.FC = () => {
-    const [plantingDate, setPlantingDate] = useState<Date | null>(null);
-    const [userId, setUserId] = useState<string | null>(null);
-    const [cropType, setCropType] = useState<'Ibigori' | 'Ibirayi' | null>(null);
-    const [showDatePicker, setShowDatePicker] = useState(false);
-    const [performedActions, setPerformedActions] = useState<string>('');
-    const [farmName, setFarmName] = useState<string>('');
-    const [scheduleList, setScheduleList] = useState<any[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [progress, setProgress] = useState<number>(0); // Progress state for each crop
-
+const Home: React.FC = () => {
     const router = useRouter();
+    const [currentLocation, setCurrentLocation] = useState<string | null>(null);
+    const [loadingLocation, setLoadingLocation] = useState(true);
+    const [currentSeason, setCurrentSeason] = useState<string | null>(null);
+    const [loadingData, setLoadingData] = useState(true);
 
-    // Request notifications permission
     useEffect(() => {
-        const requestPermissions = async () => {
-            const { status } = await Notifications.getPermissionsAsync();
-            if (status !== 'granted') {
-                Alert.alert('Permission error', 'Please enable notifications in your settings.');
-            }
+        const fetchData = async () => {
+            await getCurrentLocation();
+            await getSeason();
+            await loadCachedData();
         };
-        requestPermissions();
+
+        fetchData();
     }, []);
 
-    // Handle authentication state and fetch schedules
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            if (user) {
-                setUserId(user.uid);
-                fetchUserSchedules(user.uid);
-            } else {
-                setUserId(null);
-                router.replace('/auth');
+    // Get current location
+    const getCurrentLocation = async () => {
+        try {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                setCurrentLocation('Location permission denied');
+                setLoadingLocation(false);
+                return;
             }
-        });
-        return () => unsubscribe();
-    }, []);
 
-    // Fetch schedules and handle offline storage
-    const fetchUserSchedules = async (userId: string) => {
-        const schedulesRef = collection(db, 'PlantingSchedules');
-        const q = query(schedulesRef, where('userId', '==', userId));
+            const location = await Location.getCurrentPositionAsync({});
+            const place = await Location.reverseGeocodeAsync(location.coords);
+            const { city, region } = place[0];
+            setCurrentLocation(`${city}, ${region}`);
+        } catch (error) {
+            setCurrentLocation('Could not fetch location');
+        } finally {
+            setLoadingLocation(false);
+        }
+    };
 
-        onSnapshot(q, async (querySnapshot) => {
-            const schedules: any[] = [];
-            querySnapshot.forEach((doc) => {
-                schedules.push({ id: doc.id, ...doc.data() });
-            });
-            setScheduleList(schedules);
-            setLoading(false);
+    // Get current farming season
+    const getSeason = () => {
+        const month = new Date().getMonth(); // 0-11
+        const season = month >= 3 && month <= 8 ? 'Planting Season' : 'Harvesting Season';
+        setCurrentSeason(season);
+    };
 
-            // Store in AsyncStorage only if schedules exist
-            if (schedules && schedules.length > 0) {
-                await AsyncStorage.setItem(userId, JSON.stringify(schedules));
+    // Load cached data for offline use
+    const loadCachedData = async () => {
+        try {
+            const cachedData = await AsyncStorage.getItem('farmingData');
+            if (cachedData) {
+                // Load cached data
+                const parsedData = JSON.parse(cachedData);
+                // Set state with cached data (if necessary)
+                console.log(parsedData); // Here you can use the parsedData if needed
             }
-        });
-
-        const storedSchedules = await AsyncStorage.getItem(userId);
-        if (storedSchedules) {
-            setScheduleList(JSON.parse(storedSchedules));
-            setLoading(false);
-        }
-    };
-
-    // Format date for display
-    const formatDate = (date: any) => {
-        if (!date) return 'N/A';
-        return new Date(date).toLocaleDateString('en-GB');
-    };
-
-    // Calculate progress (days remaining for the first task, such as treatment)
-    const calculateProgress = (plantingDate: string) => {
-        const currentDate = moment();
-        const plantedDate = moment(plantingDate);
-        const diffDays = currentDate.diff(plantedDate, 'days');
-        const totalDays = 90; // Example crop lifecycle (e.g., 90 days for maize or potatoes)
-        const progress = Math.min((diffDays / totalDays) * 100, 100); // Progress in percentage
-        setProgress(progress);
-        return progress;
-    };
-
-    // Save the planting date and schedule tasks
-    const savePlantingDate = async () => {
-        if (!plantingDate || !cropType || performedActions.trim() === '' || farmName.trim() === '') {
-            Alert.alert('Input error', 'Mwihangane, Mwuzuze amakuru yose Akenewe.');
-            return;
-        }
-
-        try {
-            const newScheduleData = {
-                cropName: cropType,
-                userId,
-                status: 'Igikorwa kiracyategereje',
-                farmName,
-                plantingDate: plantingDate.toISOString(),
-                performedActions,
-            };
-
-            await addDoc(collection(db, 'PlantingSchedules'), newScheduleData);
-            setScheduleList((prevList) => [...prevList, newScheduleData]);
-
-            await scheduleInitialNotification(plantingDate);
-
-            Alert.alert('Byakunze', `Igena bikorwa ry' ${cropType} Ribitswe kuwa ${plantingDate.toLocaleDateString()}.`);
-            clearForm();
         } catch (error) {
-            Alert.alert('Save error', 'Kubika Igenabikorwa ntibyakunze.');
-            console.error('Firestore Error:', error);
+            console.error('Failed to load cached data:', error);
+        } finally {
+            setLoadingData(false);
         }
     };
 
-    // Clear form fields after saving
-    const clearForm = () => {
-        setPlantingDate(null);
-        setCropType(null);
-        setPerformedActions('');
-        setFarmName('');
-    };
-
-    // Mark an activity as complete
-    const markAsComplete = async (scheduleId: string) => {
-        try {
-            const scheduleRef = doc(db, 'PlantingSchedules', scheduleId);
-            await updateDoc(scheduleRef, { status: 'Igikorwa Cyarangiye' });
-            Alert.alert('Byakunze', 'Kwemeza ko Igikorwa Cyarangiye Byakozwe Neza.');
-        } catch (error) {
-            Alert.alert('Error', 'Kwemeza ko igikorwa cyarangiye ntibikunze.');
-            console.error('Update Error:', error);
-        }
-    };
-
-    // Delete a schedule
-    const deleteSchedule = async (scheduleId: string) => {
-        try {
-            const scheduleRef = doc(db, 'PlantingSchedules', scheduleId);
-            await deleteDoc(scheduleRef);
-            Alert.alert('Byakunze', 'Igikorwa Cyasibwe.');
-        } catch (error) {
-            Alert.alert('Error', 'Gusiba Igikorwa ntibikunze.');
-            console.error('Delete Error:', error);
-        }
-    };
-
-    // Schedule notifications for reminders
-    const scheduleInitialNotification = async (date: Date) => {
-        await Notifications.scheduleNotificationAsync({
-            content: {
-                title: 'Kwibutsa Biturutse Kuri CropCare',
-                body: `Ni igihe cyo ${cropType} igikorwa!`,
-                sound: true,
-            },
-            trigger: { date: new Date(date.getTime() + 24 * 60 * 60 * 1000) }, // Next day
-        });
-    };
-
-    // Handle date picker changes
-    const handleDateChange = (event: any, selectedDate?: Date) => {
-        setShowDatePicker(false);
-        if (selectedDate) {
-            setPlantingDate(selectedDate);
-        }
+    // Function to synchronize data when online (you can expand this function)
+    const synchronizeData = async () => {
+        // This function would include logic to fetch fresh data and cache it
+        console.log('Synchronizing data...');
+        // Example: await fetchAndCacheData();
     };
 
     return (
-        <ScrollView style={styles.container}>
-            <Text style={styles.title}>Iteganya migambi kugihingwa</Text>
+        <ScrollView contentContainerStyle={styles.container}>
+            <Text style={styles.title}>Farming Season Tips</Text>
 
-            {/* Crop Type Selection */}
-            <View style={styles.cropSelection}>
-                <TouchableOpacity
-                    style={[styles.cropButton, cropType === 'Ibigori' && styles.selectedButton]}
-                    onPress={() => setCropType('Ibigori')}
-                >
-                    <MaterialCommunityIcons name="corn" size={30} color={cropType === 'Ibigori' ? 'white' : 'black'} />
-                    <Text style={styles.buttonText}>Ibigori</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.cropButton, cropType === 'Ibirayi' && styles.selectedButton]}
-                    onPress={() => setCropType('Ibirayi')}
-                >
-                    <MaterialCommunityIcons name="nutrition" size={30} color={cropType === 'Ibirayi' ? 'white' : 'black'} />
-                    <Text style={styles.buttonText}>Ibirayi</Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* Planting Date Picker */}
-            <Button title="Kanda Hano Uhitemo Itariki Watereyeho!" onPress={() => setShowDatePicker(true)} />
-            {showDatePicker && (
-                <DateTimePicker
-                    maximumDate={new Date()}
-                    value={plantingDate || new Date()}
-                    mode="date"
-                    display="default"
-                    onChange={handleDateChange}
-                />
+            {loadingLocation ? (
+                <ActivityIndicator size="large" color="#4A90E2" />
+            ) : (
+                <Text style={styles.locationText}>Current Location: {currentLocation}</Text>
             )}
 
-            {/* Input Fields */}
-            <TextInput
-                style={styles.input}
-                placeholder="Injiza Igikorwa Upanga Gukora (Urug., kuhira, kubagara, Gutera Umuti...)"
-                value={performedActions}
-                onChangeText={setPerformedActions}
-            />
-            <TextInput
-                style={styles.input}
-                placeholder="Injiza Aho Umurima Uherereye"
-                value={farmName}
-                onChangeText={setFarmName}
-            />
+            <Text style={styles.seasonText}>Current Season: {currentSeason}</Text>
 
-            {/* Save Button */}
-            <TouchableOpacity onPress={savePlantingDate} style={styles.saveButton}>
-                <Text style={styles.saveButtonText}>Bika Amakuru</Text>
-            </TouchableOpacity>
-
-            {/* Loading and Schedule List */}
-            {loading ? (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#0000ff" />
-                    <Text style={styles.loadingText}>Tegereza gato... Amakuru arashakwa.</Text>
-                </View>
+            {loadingData ? (
+                <ActivityIndicator size="large" color="#4A90E2" />
             ) : (
-                <FlatList
-                    data={scheduleList}
-                    keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => {
-                        const progress = calculateProgress(item.plantingDate);
-                        return (
-                            <View style={styles.scheduleItem}>
-                                <Text style={styles.scheduleText}>Igihingwa: {item.cropName}</Text>
-                                <Text style={styles.scheduleText}>Itariki yo gutera: {formatDate(item.plantingDate)}</Text>
-                                <Text style={styles.scheduleText}>Amakuru yakorewe: {item.performedActions}</Text>
-                                <Text style={styles.scheduleText}>Aho Umurima: {item.farmName}</Text>
-                                <Text style={styles.scheduleText}>Icyiciro: {item.status}</Text>
+                <>
+                    <Text style={styles.infoText}>
+                        Here are some important tips for the current farming season:
+                    </Text>
 
-                                {/* Progress Bar */}
-                                <Text style={styles.scheduleText}>Iterambere ry'Igihingwa: {progress}%</Text>
-                                <ProgressBarAndroid styleAttr="Horizontal" indeterminate={false} progress={progress / 100} />
+                    <View style={styles.tipContainer}>
+                        <Text style={styles.cropTitle}>🌽 Maize Tips</Text>
+                        <Text style={styles.tipText}>
+                            - **Soil Preparation:** Ensure the soil is well-tilled and free of weeds. Add organic matter to improve soil fertility.
+                        </Text>
+                        <Text style={styles.tipText}>
+                            - **Best Planting Date:** Aim to plant maize seeds by March 15 to take advantage of moisture during the rainy season.
+                        </Text>
+                        <Text style={styles.tipText}>
+                            - **Spacing:** Space maize plants 30-50 cm apart for proper growth.
+                        </Text>
+                        <Text style={styles.tipText}>
+                            - **Watering:** Ensure consistent watering, especially during dry spells. Maize requires 500-800 mm of water during its growing season.
+                        </Text>
+                        <Text style={styles.tipText}>
+                            - **Pest Management:** Monitor for pests like the Fall Armyworm and apply recommended pesticides when necessary.
+                        </Text>
+                    </View>
 
-                                {item.status !== 'Igikorwa Cyarangiye' && (
-                                    <TouchableOpacity onPress={() => markAsComplete(item.id)} style={styles.actionButton}>
-                                        <Text style={styles.actionButtonText}>Shyiraho Ko Cyarangiye</Text>
-                                    </TouchableOpacity>
-                                )}
-                                <TouchableOpacity onPress={() => deleteSchedule(item.id)} style={styles.deleteButton}>
-                                    <Text style={styles.deleteButtonText}>Siba</Text>
-                                </TouchableOpacity>
-                            </View>
-                        );
-                    }}
-                />
+                    <View style={styles.tipContainer}>
+                        <Text style={styles.cropTitle}>🥔 Irish Potato Tips</Text>
+                        <Text style={styles.tipText}>
+                            - **Soil Preparation:** Prepare well-drained, fertile soil. Add well-rotted manure or compost to improve nutrient content.
+                        </Text>
+                        <Text style={styles.tipText}>
+                            - **Seed Selection:** Use certified disease-free seeds to ensure healthy growth.
+                        </Text>
+                        <Text style={styles.tipText}>
+                            - **Best Planting Date:** Plant Irish potatoes by March 5, ideally before the first heavy rains.
+                        </Text>
+                        <Text style={styles.tipText}>
+                            - **Fertilization:** Apply fertilizers rich in phosphorus and potassium at planting and side-dress with nitrogen two weeks after emergence.
+                        </Text>
+                        <Text style={styles.tipText}>
+                            - **Disease Control:** Regularly check for signs of blight and apply fungicides as needed.
+                        </Text>
+                    </View>
+
+                    <Text style={styles.sectionTitle}>Seed Selection</Text>
+                    <Text style={styles.infoText}>
+                        Choose the following seeds for the current season:
+                    </Text>
+                    <View style={styles.seedContainer}>
+                        <Text style={styles.seedTitle}>🌽 Maize Seeds:</Text>
+                        <Text style={styles.seedText}>
+                            - **Hybrid Varieties:** Consider seeds like 'H520', which are resistant to local pests and yield high.
+                        </Text>
+                        <Text style={styles.seedText}>
+                            - **Open Pollinated Varieties:** Such as 'Katumani', suitable for diverse weather conditions.
+                        </Text>
+                        
+                        <Text style={styles.seedTitle}>🥔 Irish Potato Seeds:</Text>
+                        <Text style={styles.seedText}>
+                            - **Varieties:** Use 'Dutch Robjin' or 'Shangi' for good yield and disease resistance.
+                        </Text>
+                        <Text style={styles.seedText}>
+                            - **Certified Seeds:** Ensure to use certified seeds to minimize risks of diseases.
+                        </Text>
+                    </View>
+
+                    <Text style={styles.sectionTitle}>Scheduling Reminders</Text>
+                    <Text style={styles.infoText}>
+                        Set reminders for important farming activities:
+                    </Text>
+                    <View style={styles.reminderContainer}>
+                        <Text style={styles.reminderText}>
+                            - **Maize Sowing Date:** Plant your maize seeds by March 15 for optimal growth.
+                        </Text>
+                        <Text style={styles.reminderText}>
+                            - **Maize Fertilization:** Fertilize your maize crops two weeks after planting (around March 29).
+                        </Text>
+                        <Text style={styles.reminderText}>
+                            - **Irish Potato Sowing Date:** Aim to plant Irish potatoes by March 5.
+                        </Text>
+                        <Text style={styles.reminderText}>
+                            - **Irish Potato Fertilization:** Apply fertilizers at planting and again on March 19.
+                        </Text>
+                    </View>
+
+                    <Button title="Set Reminder" onPress={() => router.push('/home/crop-management/setReminder')} />
+                </>
             )}
         </ScrollView>
     );
@@ -281,87 +182,90 @@ const PlantingSchedule: React.FC = () => {
 
 const styles = StyleSheet.create({
     container: {
-        padding: 20,
+        flexGrow: 1,
+        padding: 16,
+        backgroundColor: '#f5f5f5',
     },
     title: {
+        fontSize: 28,
+        fontWeight: 'bold',
+        color: '#4A90E2',
+        textAlign: 'center',
+        marginBottom: 16,
+    },
+    locationText: {
+        fontSize: 18,
+        color: '#333',
+        textAlign: 'center',
+        marginBottom: 8,
+    },
+    seasonText: {
+        fontSize: 18,
+        color: '#333',
+        textAlign: 'center',
+        marginBottom: 16,
+        fontWeight: 'bold',
+    },
+    sectionTitle: {
         fontSize: 24,
         fontWeight: 'bold',
-        textAlign: 'center',
-        marginBottom: 20,
+        color: '#4A90E2',
+        marginBottom: 8,
     },
-    cropSelection: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        marginBottom: 20,
-    },
-    cropButton: {
-        flex: 1,
-        padding: 10,
-        backgroundColor: '#f0f0f0',
-        borderRadius: 5,
-        alignItems: 'center',
-    },
-    selectedButton: {
-        backgroundColor: '#4CAF50',
-    },
-    buttonText: {
-        marginTop: 5,
-        color: 'black',
-    },
-    input: {
-        height: 40,
-        borderColor: 'gray',
-        borderWidth: 1,
-        marginBottom: 10,
-        paddingHorizontal: 10,
-    },
-    saveButton: {
-        backgroundColor: '#4CAF50',
-        padding: 10,
-        borderRadius: 5,
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-    saveButtonText: {
-        color: 'white',
+    infoText: {
         fontSize: 16,
+        color: '#333',
+        marginBottom: 16,
     },
-    loadingContainer: {
-        alignItems: 'center',
-        marginVertical: 20,
+    tipContainer: {
+        marginBottom: 20,
+        padding: 10,
+        backgroundColor: '#fff',
+        borderRadius: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
     },
-    loadingText: {
-        marginTop: 10,
+    cropTitle: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#4A90E2',
+        marginBottom: 8,
     },
-    scheduleItem: {
-        backgroundColor: '#f9f9f9',
-        padding: 15,
-        borderRadius: 5,
-        marginBottom: 10,
-    },
-    scheduleText: {
+    tipText: {
         fontSize: 16,
-        marginVertical: 2,
+        color: '#555',
+        marginBottom: 8,
     },
-    actionButton: {
-        backgroundColor: '#4CAF50',
+    seedContainer: {
+        marginBottom: 20,
         padding: 10,
-        borderRadius: 5,
-        alignItems: 'center',
-        marginVertical: 5,
+        backgroundColor: '#e0f7fa',
+        borderRadius: 8,
     },
-    actionButtonText: {
-        color: 'white',
+    seedTitle: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#00796b',
     },
-    deleteButton: {
-        backgroundColor: 'red',
+    seedText: {
+        fontSize: 16,
+        color: '#555',
+        marginBottom: 8,
+    },
+    reminderContainer: {
+        marginBottom: 20,
         padding: 10,
-        borderRadius: 5,
-        alignItems: 'center',
+        backgroundColor: '#ffe0b2',
+        borderRadius: 8,
     },
-    deleteButtonText: {
-        color: 'white',
+    reminderText: {
+        fontSize: 16,
+        color: '#555',
+        marginBottom: 8,
     },
 });
 
-export default PlantingSchedule;
+export default Home;

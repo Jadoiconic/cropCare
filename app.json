@@ -26,7 +26,7 @@
         "WRITE_EXTERNAL_STORAGE",
         "CAMERA",
         "MEDIA_LIBRARY",
-        "WRITE_EXTERNAL_STORAGE"
+        "NOTIFICATIONS" 
       ]
     },
     "web": {
@@ -45,6 +45,10 @@
       "eas": {
         "projectId": "49193a5e-bb4b-4372-80dd-bbc71b82700e"
       }
+    },
+    "notification": {
+      "icon": "./assets/images/icon.png",
+      "color": "#007bff"
     }
   }
 }

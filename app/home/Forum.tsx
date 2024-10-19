@@ -85,6 +85,18 @@ const Forum = () => {
         fetchPosts();
     }, [currentUser]);
 
+    // Request camera roll permissions
+    const requestCameraRollPermission = async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+            alert("Sorry, we need camera roll permissions to make this work!");
+        }
+    };
+
+    useEffect(() => {
+        requestCameraRollPermission();
+    }, []);
+
     const handleCreatePost = async () => {
         if (newPostContent.trim()) {
             try {
@@ -100,12 +112,6 @@ const Forum = () => {
     };
 
     const pickImage = async () => {
-        const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!permissionResult.granted) {
-            alert("Sorry, we need camera roll permissions to make this work!");
-            return;
-        }
-
         const result = await ImagePicker.launchImageLibraryAsync();
         if (!result.canceled) {
             setImageUri(result.assets[0].uri);
@@ -280,7 +286,7 @@ const styles = StyleSheet.create({
         marginBottom: 10,
     },
     chatButton: {
-        backgroundColor: '#28a745',
+        backgroundColor: '#007bff',
         padding: 10,
         borderRadius: 10,
         alignItems: 'center',
@@ -290,31 +296,9 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontWeight: 'bold',
     },
-    modalContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    },
-    fullScreenImage: {
-        width: '100%',
-        height: '100%',
-        resizeMode: 'contain',
-    },
-    closeButton: {
-        position: 'absolute',
-        top: 50,
-        right: 20,
-        backgroundColor: '#fff',
-        borderRadius: 5,
-        padding: 10,
-    },
-    closeButtonText: {
-        color: '#000',
-        fontWeight: 'bold',
-    },
     post: {
-        backgroundColor: '#f8f9fa',
+        borderWidth: 1,
+        borderColor: '#ccc',
         borderRadius: 10,
         padding: 10,
         marginBottom: 10,
@@ -324,11 +308,11 @@ const styles = StyleSheet.create({
     },
     postOwnerText: {
         fontSize: 12,
-        color: '#666',
+        color: '#888',
     },
     postImage: {
         width: '100%',
-        height: 150,
+        height: 200,
         borderRadius: 10,
         marginTop: 10,
     },
@@ -342,7 +326,36 @@ const styles = StyleSheet.create({
         marginTop: 10,
     },
     repliesContainer: {
-        marginTop: 5,
+        marginTop: 10,
         marginLeft: 20,
+    },
+    fullScreenImage: {
+        width: '100%',
+        height: '100%',
+        resizeMode: 'contain',
+    },
+    modalContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    },
+    closeButton: {
+        backgroundColor: '#fff',
+        padding: 10,
+        borderRadius: 5,
+        marginTop: 20,
+    },
+    closeButtonText: {
+        color: '#007bff',
+        fontWeight: 'bold',
+    },
+    replyInput: {
+        flex: 1,
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 5,
+        padding: 10,
+        marginRight: 10,
     },
 });

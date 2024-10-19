@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View, FlatList, TouchableOpacity, Alert } from "react-native";
-import { db } from "@/services/config"; // Adjust your import based on your file structure
+import { db } from "@/services/config"; // Import Firebase config
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import * as Linking from 'expo-linking';
 
+// Interface for PDF file type
 interface PdfFile {
   id: string;
   name: string;
@@ -15,42 +16,44 @@ interface PdfFile {
 }
 
 const PdfScreen = () => {
-  const [pdfFiles, setPdfFiles] = useState<PdfFile[]>([]);
+  const [pdfFiles, setPdfFiles] = useState<PdfFile[]>([]); // State for storing PDF files
+  const [loading, setLoading] = useState(true); // Loading state
 
   useEffect(() => {
     fetchPdfFiles();
   }, []);
 
+  // Function to fetch PDF files from Firestore
   const fetchPdfFiles = async () => {
     try {
-      const q = query(collection(db, 'pdfFiles'), orderBy('createdAt', 'desc'));
+      const q = query(collection(db, 'pdfFiles'), orderBy('createdAt', 'desc')); // Query to get files ordered by date
       const querySnapshot = await getDocs(q);
-      const files: PdfFile[] = [];
-      querySnapshot.forEach((doc) => {
-        files.push({ id: doc.id, ...doc.data() } as PdfFile);
-      });
-      setPdfFiles(files);
+      const files: PdfFile[] = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      } as PdfFile));
+      setPdfFiles(files); // Update state with fetched files
     } catch (error) {
       console.error("Error fetching PDF files:", error);
       Alert.alert("Error", "Unable to fetch PDF files. Please check your permissions.");
+    } finally {
+      setLoading(false); // Stop loading after the fetch
     }
   };
 
+  // Function to open PDF URL
   const openPdf = async (url: string) => {
     try {
-      // Open the URL in the browser
-      await Linking.openURL(url);
+      await Linking.openURL(url); // Attempt to open PDF URL
     } catch (error) {
       console.error("Error opening PDF:", error);
-      Alert.alert('Error', 'Could not open the PDF file');
+      Alert.alert('Error', 'Could not open the PDF file.');
     }
   };
 
+  // Render function for each PDF item
   const renderPdfItem = ({ item }: { item: PdfFile }) => (
-    <TouchableOpacity
-      style={styles.pdfItem}
-      onPress={() => openPdf(item.url)}
-    >
+    <TouchableOpacity style={styles.pdfItem} onPress={() => openPdf(item.url)}>
       <Text style={styles.pdfTitle}>{item.title}</Text>
       <Text style={styles.pdfDescription}>{item.description}</Text>
       <Text style={styles.uploadDate}>
@@ -61,13 +64,19 @@ const PdfScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Ibitabo Bifasha Kwihugura Mubuhinzi bugezweho haba Ibirayi Cg Ibigori</Text>
-      <FlatList
-        data={pdfFiles}
-        renderItem={renderPdfItem}
-        keyExtractor={(item) => item.id}
-        style={styles.list}
-      />
+      <Text style={styles.title}>
+        Ibitabo Bifasha Kwihugura Mubuhinzi bugezweho haba Ibirayi Cg Ibigori
+      </Text>
+      {loading ? (
+        <Text style={styles.loadingText}>Loading PDF files...</Text>
+      ) : (
+        <FlatList
+          data={pdfFiles}
+          renderItem={renderPdfItem}
+          keyExtractor={(item) => item.id}
+          style={styles.list}
+        />
+      )}
     </View>
   );
 };
@@ -83,6 +92,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 20,
     color: '#333',
+    textAlign: 'center',
   },
   list: {
     flex: 1,
@@ -112,6 +122,11 @@ const styles = StyleSheet.create({
   },
   uploadDate: {
     fontSize: 12,
+    color: '#999',
+  },
+  loadingText: {
+    fontSize: 16,
+    textAlign: 'center',
     color: '#999',
   },
 });
