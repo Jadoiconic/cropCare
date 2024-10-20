@@ -3,157 +3,181 @@ import {
     View,
     Text,
     StyleSheet,
-    FlatList,
-    ActivityIndicator,
+    ScrollView,
     Button,
+    ProgressBarAndroid, // For Android
+    Platform,
 } from 'react-native';
-import { auth, db } from '@/services/config';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const ScheduledReminders: React.FC = () => {
-    const [reminders, setReminders] = useState<any[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [error, setError] = useState<string | null>(null); // Error state
+interface Reminder {
+    title: string; // Title of the reminder
+    body: string; // Description of the reminder
+    time: number; // Time in Unix timestamp format
+}
+
+const Reminders: React.FC = () => {
+    const [reminders, setReminders] = useState<Reminder[]>([]);
 
     useEffect(() => {
-        const fetchReminders = async () => {
-            try {
-                const userId = auth.currentUser?.uid;
-                const remindersRef = collection(db, 'PlantingSchedules');
-                const q = query(remindersRef, where('userId', '==', userId));
-
-                const unsubscribe = onSnapshot(q, (querySnapshot) => {
-                    const schedules: any[] = [];
-                    querySnapshot.forEach((doc) => {
-                        schedules.push({ id: doc.id, ...doc.data() });
-                    });
-
-                    setReminders(schedules);
-                    setLoading(false);
-                }, (error) => {
-                    setError(error.message);
-                    setLoading(false);
-                });
-
-                // Clean up the listener on unmount
-                return () => unsubscribe();
-            } catch (err) {
-                setError((err as Error).message);
-                setLoading(false);
-            }
-        };
-
-        fetchReminders();
+        loadReminders();
     }, []);
 
-    // Function to calculate next action date based on planting date and predefined intervals
-    const calculateNextActionDate = (plantingDate: string, cropType: string) => {
-        const date = new Date(plantingDate);
-        let nextActionDays = 0;
-
-        // Define action intervals based on crop type or predefined actions
-        if (cropType === 'Potatoes') {
-            nextActionDays = 30; // Example: fertilize after 30 days for potatoes
-        } else if (cropType === 'Maize') {
-            nextActionDays = 40; // Example: weed control after 40 days for maize
-        } else {
-            nextActionDays = 20; // Default action after 20 days
+    const loadReminders = async () => {
+        try {
+            const savedReminders = await AsyncStorage.getItem('reminders');
+            if (savedReminders) {
+                const remindersArray: Reminder[] = JSON.parse(savedReminders);
+                setReminders(remindersArray);
+            }
+        } catch (error) {
+            console.error('Error loading reminders:', error);
         }
-
-        const nextActionDate = new Date(date);
-        nextActionDate.setDate(date.getDate() + nextActionDays);
-        return nextActionDate.toLocaleDateString();
     };
 
-    const renderReminderItem = ({ item }: { item: any }) => (
-        <View style={styles.reminderItem}>
-            <Text style={styles.reminderText}>Crop: {item.cropName}</Text>
-            <Text style={styles.reminderText}>Farm: {item.farmName}</Text>
-            <Text style={styles.reminderText}>Actions: {item.performedActions}</Text>
-            <Text style={styles.reminderText}>
-                Planting Date: {new Date(item.plantingDate).toLocaleDateString()}
-            </Text>
-            <Text style={styles.reminderText}>
-                Next Action Date: {calculateNextActionDate(item.plantingDate, item.cropName)}
-            </Text>
-        </View>
-    );
+    const addReminder = async (newReminder: Reminder) => {
+        const updatedReminders = [...reminders, newReminder];
+        setReminders(updatedReminders);
+        await AsyncStorage.setItem('reminders', JSON.stringify(updatedReminders));
+    };
+
+    const getTimeRemaining = (time: number) => {
+        const currentTime = Math.floor(Date.now() / 1000);
+        const remainingTime = time - currentTime;
+        return remainingTime > 0 ? remainingTime : 0; // Ensure time is not negative
+    };
+
+    const renderProgressBar = (remainingTime: number, totalDuration: number) => {
+        const progress = Math.min(remainingTime / totalDuration, 1);
+
+        if (Platform.OS === 'android') {
+            return (
+                <ProgressBarAndroid
+                    styleAttr="Horizontal"
+                    color="#4CAF50"
+                    progress={progress}
+                />
+            );
+        } else {
+            return (
+                <View style={styles.progressBar}>
+                    <View style={[styles.progress, { width: `${progress * 100}%` }]} />
+                </View>
+            );
+        }
+    };
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Scheduled Reminders</Text>
-            {loading ? (
-                <ActivityIndicator size="large" color="#007bff" style={styles.loadingIndicator} />
-            ) : error ? (
-                <View style={styles.errorContainer}>
-                    <Text style={styles.errorText}>Error: {error}</Text>
-                    <Button title="Retry" onPress={() => {
-                        setLoading(true);
-                        setError(null);
-                        // Optionally, re-fetch reminders
-                        fetchReminders();
-                    }} />
-                </View>
-            ) : reminders.length === 0 ? (
-                <Text style={styles.emptyText}>No scheduled reminders found.</Text>
-            ) : (
-                <FlatList
-                    data={reminders}
-                    keyExtractor={(item) => item.id}
-                    renderItem={renderReminderItem}
-                    contentContainerStyle={styles.listContainer}
-                />
-            )}
+            <Text style={styles.title}>Reminders for Farmers</Text>
+            <Text style={styles.instructions}>
+                Here are your upcoming reminders. Keep track of your farming tasks!
+            </Text>
+            <Button
+                title="Add Reminder"
+                onPress={() => {
+                    // Example reminder object
+                    const newReminder: Reminder = {
+                        title: 'Water the crops',
+                        body: 'Remember to water your crops today.',
+                        time: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
+                    };
+                    addReminder(newReminder);
+                }}
+            />
+            <ScrollView contentContainerStyle={styles.scrollView}>
+                {reminders.length === 0 ? (
+                    <Text style={styles.noReminders}>No reminders set yet!</Text>
+                ) : (
+                    reminders.map((reminder, index) => {
+                        const remainingTime = getTimeRemaining(reminder.time);
+                        const isExpired = remainingTime <= 0;
+
+                        return (
+                            <View key={index} style={styles.reminderContainer}>
+                                <Text style={styles.reminderTitle}>{reminder.title}</Text>
+                                <Text style={styles.reminderBody}>{reminder.body}</Text>
+                                <Text style={styles.reminderTime}>
+                                    Time Left: {isExpired ? 'Time has passed' : `${Math.floor(remainingTime / 60)} minutes left`}
+                                </Text>
+                                {renderProgressBar(isExpired ? 0 : remainingTime, reminder.time)}
+                                {isExpired && <Text style={styles.status}>Status: Past Due</Text>}
+                            </View>
+                        );
+                    })
+                )}
+            </ScrollView>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
-        padding: 20,
         flex: 1,
-        backgroundColor: '#f9f9f9',
+        padding: 16,
+        backgroundColor: '#f5f5f5',
     },
     title: {
         fontSize: 24,
         fontWeight: 'bold',
+        marginBottom: 10,
         textAlign: 'center',
-        marginBottom: 20,
         color: '#333',
     },
-    loadingIndicator: {
-        marginVertical: 20,
-    },
-    reminderItem: {
-        padding: 15,
-        borderColor: '#ddd',
-        borderWidth: 1,
-        borderRadius: 8,
-        marginVertical: 5,
-        backgroundColor: '#fff',
-    },
-    reminderText: {
+    instructions: {
         fontSize: 16,
+        marginBottom: 20,
+        textAlign: 'center',
         color: '#555',
     },
-    errorContainer: {
-        alignItems: 'center',
-        marginVertical: 20,
+    scrollView: {
+        paddingBottom: 20,
     },
-    errorText: {
-        color: 'red',
-        textAlign: 'center',
-        marginBottom: 10,
-    },
-    emptyText: {
+    noReminders: {
         textAlign: 'center',
         fontSize: 18,
-        color: '#888',
+        color: '#999',
         marginTop: 20,
     },
-    listContainer: {
-        paddingBottom: 20,
+    reminderContainer: {
+        backgroundColor: '#fff',
+        padding: 15,
+        borderRadius: 8,
+        marginBottom: 15,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
+        elevation: 1,
+    },
+    reminderTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    reminderBody: {
+        fontSize: 16,
+        marginVertical: 5,
+    },
+    reminderTime: {
+        fontSize: 14,
+        color: '#777',
+    },
+    progressBar: {
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: '#e0e0e0',
+        overflow: 'hidden',
+        marginTop: 10,
+    },
+    progress: {
+        height: '100%',
+        backgroundColor: '#4CAF50',
+    },
+    status: {
+        marginTop: 5,
+        color: 'red',
+        fontWeight: 'bold',
     },
 });
 
-export default ScheduledReminders;
+export default Reminders;

@@ -108,7 +108,7 @@ const ExpertChatScreen = () => {
 
   const sendMessage = async () => {
     if (!message && !image) {
-      Alert.alert('Empty Message', 'Please enter a message or select an image.');
+      Alert.alert('Murikohereza Ubusa Mubutumwa', 'Mgire Ubutumwa Mwandika.');
       return;
     }
 
@@ -137,7 +137,7 @@ const ExpertChatScreen = () => {
       Keyboard.dismiss();
     } catch (error) {
       console.error('Error sending message:', error);
-      Alert.alert('Error', 'Failed to send message.');
+      Alert.alert('Byanze', 'Mwandike Ijambo Rijyana Nifoto.');
     } finally {
       setSendingMessage(false);
     }
@@ -166,7 +166,7 @@ const ExpertChatScreen = () => {
         () => {},
         (error) => {
           console.error('Image upload failed:', error);
-          reject('Error uploading image. Please try again.');
+          reject('Kwinjiza Ifoto Byanze. Mwongere Mugerageze.');
         },
         async () => {
           const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
@@ -218,7 +218,7 @@ const ExpertChatScreen = () => {
           {loadingMessages && <ActivityIndicator size="large" color="#0000ff" />}
           <View style={styles.inputContainer}>
             <TextInput
-              placeholder="Write your message..."
+              placeholder="Injiza Ubutumwa..."
               value={message}
               onChangeText={setMessage}
               style={styles.input}
@@ -258,7 +258,7 @@ const ExpertChatScreen = () => {
         <View style={styles.modalContainer}>
           <Image source={{ uri: selectedImage }} style={styles.fullScreenImage} />
           <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
-            <Text style={styles.closeButtonText}>Close</Text>
+            <Text style={styles.closeButtonText}>Funga</Text>
           </TouchableOpacity>
         </View>
       </Modal>

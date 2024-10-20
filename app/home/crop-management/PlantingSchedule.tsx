@@ -1,271 +1,253 @@
-// app/screens/Home.tsx
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Button, ScrollView, ActivityIndicator } from 'react-native';
-import * as Location from 'expo-location';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 
-const Home: React.FC = () => {
-    const router = useRouter();
-    const [currentLocation, setCurrentLocation] = useState<string | null>(null);
-    const [loadingLocation, setLoadingLocation] = useState(true);
-    const [currentSeason, setCurrentSeason] = useState<string | null>(null);
-    const [loadingData, setLoadingData] = useState(true);
+const FarmingGuideScreen = () => {
+  const router = useRouter();
 
-    useEffect(() => {
-        const fetchData = async () => {
-            await getCurrentLocation();
-            await getSeason();
-            await loadCachedData();
-        };
+  const schedules = {
+    maize: [
+      { task: 'Gutera Ibigori', date: 'Nzeli 15 - Ukwakira 10 (Igihembwe A)' },
+      { task: 'Kurandura ibyatsi', date: 'Ukwakira 25' },
+      { task: 'Gufumbira', date: 'Ukwakira 20' },
+      { task: 'Gusarura', date: 'Mutarama 20 - Gashyantare 5' },
+    ],
+    potatoes: [
+      { task: 'Gutera Ibirayi', date: 'Nzeli 15 - Ukwakira 5 (Igihembwe A)' },
+      { task: 'Kuzunguza ibirayi', date: 'Ugushyingo 15' },
+      { task: 'Gufumbira', date: 'Ukwakira 10' },
+      { task: 'Gusarura', date: 'Mutarama 20 - Gashyantare 5' },
+    ],
+  };
 
-        fetchData();
-    }, []);
+  return (
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollView}>
+        {/* Farming Seasons Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Ibihembwe by'Ubuhinzi mu Rwanda</Text>
+          <Text style={styles.content}>
+            Mu Rwanda hari ibihembwe by’ingenzi by’ubuhinzi bibiri:
+          </Text>
+          <Text style={styles.subSectionTitle}>1. Igihembwe A (Nzeli - Mutarama)</Text>
+          <Text style={styles.content}>
+            Igihembwe A ritangira mu kwezi kwa Nzeli rigasozwa muri Mutarama. Ni igihe cy’imvura nkeya, gikwiranye n’imyaka nk’ibigori n’ibirayi. Gutera bikorwa hagati muri Nzeli no mu ntangiriro z’Ukwakira.
+          </Text>
+          <Text style={styles.subSectionTitle}>2. Igihembwe B (Gashyantare - Kamena)</Text>
+          <Text style={styles.content}>
+            Igihembwe B gitangira muri Gashyantare kigasoza muri Kamena. Iki gihe ni igihe cy’imvura nyinshi, kikaba gikwiranye n’imyaka myinshi. Gutera bikorwa hagati muri Gashyantare.
+          </Text>
+          <Text style={styles.subSectionTitle}>3. Igihembwe C (Kamena - Kanama)</Text>
+          <Text style={styles.content}>
+            Hari aho bahinga n’igihembwe gito, cyizwi nka C, gitangira muri Kamena kikageza Kanama, cyane cyane ku bihingwa byihuta nk'imboga.
+          </Text>
+        </View>
 
-    // Get current location
-    const getCurrentLocation = async () => {
-        try {
-            const { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') {
-                setCurrentLocation('Location permission denied');
-                setLoadingLocation(false);
-                return;
-            }
+        {/* Planting Dates Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Amatariki Meza yo Gutera</Text>
 
-            const location = await Location.getCurrentPositionAsync({});
-            const place = await Location.reverseGeocodeAsync(location.coords);
-            const { city, region } = place[0];
-            setCurrentLocation(`${city}, ${region}`);
-        } catch (error) {
-            setCurrentLocation('Could not fetch location');
-        } finally {
-            setLoadingLocation(false);
-        }
-    };
+          {/* Maize Planting Dates */}
+          <Text style={styles.subSectionTitle}>Ibigori</Text>
+          <Text style={styles.content}>
+            <Text style={styles.bold}>Igihembwe A:</Text> Amatariki Meza: Nzeli 15 - Ukwakira 10.{"\n"}
+            <Text style={styles.bold}>Igihembwe B:</Text> Amatariki Meza: Gashyantare 1 - Gashyantare 15.
+          </Text>
 
-    // Get current farming season
-    const getSeason = () => {
-        const month = new Date().getMonth(); // 0-11
-        const season = month >= 3 && month <= 8 ? 'Planting Season' : 'Harvesting Season';
-        setCurrentSeason(season);
-    };
+          {/* Potato Planting Dates */}
+          <Text style={styles.subSectionTitle}>Ibirayi</Text>
+          <Text style={styles.content}>
+            <Text style={styles.bold}>Igihembwe A:</Text> Amatariki Meza: Nzeli 15 - Ukwakira 5.{"\n"}
+            <Text style={styles.bold}>Igihembwe B:</Text> Amatariki Meza: Gashyantare 1 - Gashyantare 10.
+          </Text>
+        </View>
 
-    // Load cached data for offline use
-    const loadCachedData = async () => {
-        try {
-            const cachedData = await AsyncStorage.getItem('farmingData');
-            if (cachedData) {
-                // Load cached data
-                const parsedData = JSON.parse(cachedData);
-                // Set state with cached data (if necessary)
-                console.log(parsedData); // Here you can use the parsedData if needed
-            }
-        } catch (error) {
-            console.error('Failed to load cached data:', error);
-        } finally {
-            setLoadingData(false);
-        }
-    };
+        {/* Pest and Disease Management Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Kwirinda Ibyonnyi n'Indwara</Text>
 
-    // Function to synchronize data when online (you can expand this function)
-    const synchronizeData = async () => {
-        // This function would include logic to fetch fresh data and cache it
-        console.log('Synchronizing data...');
-        // Example: await fetchAndCacheData();
-    };
+          {/* Maize Pests and Diseases */}
+          <Text style={styles.subSectionTitle}>Ibigori</Text>
+          <Text style={styles.content}>
+            <Text style={styles.bold}>Inyenzi z'Ibigori:</Text> Shyiraho umuti wa Emamectin Benzoate nyuma y’ibyumweru 2-3 wateye.{"\n"}
+            <Text style={styles.bold}>Ikirya insina:</Text> Shyiraho umuti wa Chlorpyrifos nyuma y’ibyumweru 2.{"\n"}
+            <Text style={styles.bold}>Indwara y’Ibirai:</Text> Koresha umuti wa Azoxystrobin ubonye ibimenyetso.
+          </Text>
 
-    return (
-        <ScrollView contentContainerStyle={styles.container}>
-            <Text style={styles.title}>Farming Season Tips</Text>
+          {/* Potato Pests and Diseases */}
+          <Text style={styles.subSectionTitle}>Ibirayi</Text>
+          <Text style={styles.content}>
+            <Text style={styles.bold}>Icyohe:</Text> Shyiraho Mancozeb nyuma y’iminsi 7-10 uteye.{"\n"}
+            <Text style={styles.bold}>Inyenzi z’ibirayi:</Text> Koresha Oxamyl igihe uteye no mugihe bikura.{"\n"}
+            <Text style={styles.bold}>Inyenzi:</Text> Shyiraho umuti wa Imidacloprid nyuma y’ibyumweru 2-3 uteye.
+          </Text>
+        </View>
 
-            {loadingLocation ? (
-                <ActivityIndicator size="large" color="#4A90E2" />
-            ) : (
-                <Text style={styles.locationText}>Current Location: {currentLocation}</Text>
-            )}
+        {/* Best Practices Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Amabwiriza Meza yo Guhinga</Text>
 
-            <Text style={styles.seasonText}>Current Season: {currentSeason}</Text>
+          {/* Maize Best Practices */}
+          <Text style={styles.subSectionTitle}>Ibigori</Text>
+          <Text style={styles.content}>
+            <Text style={styles.bold}>Gushyira ifumbire:</Text> Fumbira na NPK (17:17:17) ku itariki ya Ukwakira 25.{"\n"}
+            <Text style={styles.bold}>Gufumbira Urea:</Text> Shyiraho Urea muri Nzeli kugirango ibigori bikure neza.{"\n"}
+            <Text style={styles.bold}>Kurandura ibyatsi:</Text> Banza kurandura mbere y’Ukwakira 25.
+          </Text>
 
-            {loadingData ? (
-                <ActivityIndicator size="large" color="#4A90E2" />
-            ) : (
-                <>
-                    <Text style={styles.infoText}>
-                        Here are some important tips for the current farming season:
-                    </Text>
+          {/* Potato Best Practices */}
+          <Text style={styles.subSectionTitle}>Ibirayi</Text>
+          <Text style={styles.content}>
+            <Text style={styles.bold}>Gushyira ifumbire:</Text> Fumbira na NPK (17:17:17) mbere y’Ukwakira 10.{"\n"}
+            <Text style={styles.bold}>Kuzunguza Ibirayi:</Text> Kuzunguza ku itariki ya Ugushyingo 15.{"\n"}
+            <Text style={styles.bold}>Koresha umuti:</Text> Shyiraho umuti wa Mancozeb kuri Ukwakira 25.
+          </Text>
+        </View>
 
-                    <View style={styles.tipContainer}>
-                        <Text style={styles.cropTitle}>🌽 Maize Tips</Text>
-                        <Text style={styles.tipText}>
-                            - **Soil Preparation:** Ensure the soil is well-tilled and free of weeds. Add organic matter to improve soil fertility.
-                        </Text>
-                        <Text style={styles.tipText}>
-                            - **Best Planting Date:** Aim to plant maize seeds by March 15 to take advantage of moisture during the rainy season.
-                        </Text>
-                        <Text style={styles.tipText}>
-                            - **Spacing:** Space maize plants 30-50 cm apart for proper growth.
-                        </Text>
-                        <Text style={styles.tipText}>
-                            - **Watering:** Ensure consistent watering, especially during dry spells. Maize requires 500-800 mm of water during its growing season.
-                        </Text>
-                        <Text style={styles.tipText}>
-                            - **Pest Management:** Monitor for pests like the Fall Armyworm and apply recommended pesticides when necessary.
-                        </Text>
-                    </View>
+        {/* Recommended Seeds Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Amahundo Meza y’Imbuto</Text>
 
-                    <View style={styles.tipContainer}>
-                        <Text style={styles.cropTitle}>🥔 Irish Potato Tips</Text>
-                        <Text style={styles.tipText}>
-                            - **Soil Preparation:** Prepare well-drained, fertile soil. Add well-rotted manure or compost to improve nutrient content.
-                        </Text>
-                        <Text style={styles.tipText}>
-                            - **Seed Selection:** Use certified disease-free seeds to ensure healthy growth.
-                        </Text>
-                        <Text style={styles.tipText}>
-                            - **Best Planting Date:** Plant Irish potatoes by March 5, ideally before the first heavy rains.
-                        </Text>
-                        <Text style={styles.tipText}>
-                            - **Fertilization:** Apply fertilizers rich in phosphorus and potassium at planting and side-dress with nitrogen two weeks after emergence.
-                        </Text>
-                        <Text style={styles.tipText}>
-                            - **Disease Control:** Regularly check for signs of blight and apply fungicides as needed.
-                        </Text>
-                    </View>
+          {/* Maize Seeds */}
+          <Text style={styles.subSectionTitle}>Ibigori</Text>
+          <Text style={styles.content}>
+            <Text style={styles.bold}>H520 (Hybrid):</Text> Ifite umusaruro mwinshi kandi ishobora guhangana n'amapfa.{"\n"}
+            <Text style={styles.bold}>Katumani:</Text> Ibereye ahantu hatabona imvura nyinshi.
+          </Text>
 
-                    <Text style={styles.sectionTitle}>Seed Selection</Text>
-                    <Text style={styles.infoText}>
-                        Choose the following seeds for the current season:
-                    </Text>
-                    <View style={styles.seedContainer}>
-                        <Text style={styles.seedTitle}>🌽 Maize Seeds:</Text>
-                        <Text style={styles.seedText}>
-                            - **Hybrid Varieties:** Consider seeds like 'H520', which are resistant to local pests and yield high.
-                        </Text>
-                        <Text style={styles.seedText}>
-                            - **Open Pollinated Varieties:** Such as 'Katumani', suitable for diverse weather conditions.
-                        </Text>
-                        
-                        <Text style={styles.seedTitle}>🥔 Irish Potato Seeds:</Text>
-                        <Text style={styles.seedText}>
-                            - **Varieties:** Use 'Dutch Robjin' or 'Shangi' for good yield and disease resistance.
-                        </Text>
-                        <Text style={styles.seedText}>
-                            - **Certified Seeds:** Ensure to use certified seeds to minimize risks of diseases.
-                        </Text>
-                    </View>
+          {/* Potato Seeds */}
+          <Text style={styles.subSectionTitle}>Ibirayi</Text>
+          <Text style={styles.content}>
+            <Text style={styles.bold}>Shangi:</Text> Imbuto yera vuba kandi itanga umusaruro mwiza.{"\n"}
+            <Text style={styles.bold}>Dutch Robjin:</Text> Ifite ubushobozi bwo guhangana n’indwara.
+          </Text>
+        </View>
 
-                    <Text style={styles.sectionTitle}>Scheduling Reminders</Text>
-                    <Text style={styles.infoText}>
-                        Set reminders for important farming activities:
-                    </Text>
-                    <View style={styles.reminderContainer}>
-                        <Text style={styles.reminderText}>
-                            - **Maize Sowing Date:** Plant your maize seeds by March 15 for optimal growth.
-                        </Text>
-                        <Text style={styles.reminderText}>
-                            - **Maize Fertilization:** Fertilize your maize crops two weeks after planting (around March 29).
-                        </Text>
-                        <Text style={styles.reminderText}>
-                            - **Irish Potato Sowing Date:** Aim to plant Irish potatoes by March 5.
-                        </Text>
-                        <Text style={styles.reminderText}>
-                            - **Irish Potato Fertilization:** Apply fertilizers at planting and again on March 19.
-                        </Text>
-                    </View>
+        {/* Farming Schedule Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Igenamigambi ry'Ubuhinzi</Text>
 
-                    <Button title="Set Reminder" onPress={() => router.push('/home/crop-management/setReminder')} />
-                </>
-            )}
-        </ScrollView>
-    );
+          {/* Schedule Table */}
+          <View style={styles.table}>
+            <View style={styles.tableHeader}>
+              <Text style={styles.tableHeaderText}>Akazi</Text>
+              <Text style={styles.tableHeaderText}>Amatariki Ibigori</Text>
+              <Text style={styles.tableHeaderText}>Amatariki Ibirayi</Text>
+            </View>
+            {schedules.maize.map((item, index) => (
+              <View key={index} style={styles.tableRow}>
+                <Text style={styles.tableRowText}>{item.task}</Text>
+                <Text style={styles.tableRowText}>{item.date}</Text>
+                <Text style={styles.tableRowText}>{schedules.potatoes[index].date}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Add Padding at the Bottom to Prevent Overlap */}
+      <View style={styles.bottomSpacing} />
+
+      {/* Button */}
+      <TouchableOpacity style={styles.reminderButton} onPress={() => router.push('/home/crop-management/setReminder')}>
+        <Text style={styles.reminderButtonText}>Shyiraho Urwibutso</Text>
+      </TouchableOpacity>
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flexGrow: 1,
-        padding: 16,
-        backgroundColor: '#f5f5f5',
-    },
-    title: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#4A90E2',
-        textAlign: 'center',
-        marginBottom: 16,
-    },
-    locationText: {
-        fontSize: 18,
-        color: '#333',
-        textAlign: 'center',
-        marginBottom: 8,
-    },
-    seasonText: {
-        fontSize: 18,
-        color: '#333',
-        textAlign: 'center',
-        marginBottom: 16,
-        fontWeight: 'bold',
-    },
-    sectionTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#4A90E2',
-        marginBottom: 8,
-    },
-    infoText: {
-        fontSize: 16,
-        color: '#333',
-        marginBottom: 16,
-    },
-    tipContainer: {
-        marginBottom: 20,
-        padding: 10,
-        backgroundColor: '#fff',
-        borderRadius: 8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    cropTitle: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: '#4A90E2',
-        marginBottom: 8,
-    },
-    tipText: {
-        fontSize: 16,
-        color: '#555',
-        marginBottom: 8,
-    },
-    seedContainer: {
-        marginBottom: 20,
-        padding: 10,
-        backgroundColor: '#e0f7fa',
-        borderRadius: 8,
-    },
-    seedTitle: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: '#00796b',
-    },
-    seedText: {
-        fontSize: 16,
-        color: '#555',
-        marginBottom: 8,
-    },
-    reminderContainer: {
-        marginBottom: 20,
-        padding: 10,
-        backgroundColor: '#ffe0b2',
-        borderRadius: 8,
-    },
-    reminderText: {
-        fontSize: 16,
-        color: '#555',
-        marginBottom: 8,
-    },
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  scrollView: {
+    padding: 16,
+    paddingBottom: 100, // Added bottom padding to avoid button overlap
+  },
+  section: {
+    marginBottom: 24,
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#228B22', // Dark Green for Section Titles
+    marginBottom: 8,
+  },
+  subSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#32CD32', // Bright Green for Subsection Titles
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  content: {
+    fontSize: 14,
+    color: '#333333',
+    marginBottom: 8,
+    lineHeight: 20,
+  },
+  bold: {
+    fontWeight: 'bold',
+    color: '#228B22', // Dark Green for Emphasis
+  },
+  table: {
+    marginTop: 12,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#228B22',
+    padding: 8,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+  },
+  tableHeaderText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    textAlign: 'center',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    backgroundColor: '#f0f0f0',
+    padding: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  tableRowText: {
+    flex: 1,
+    fontSize: 14,
+    textAlign: 'center',
+    color: '#333333',
+  },
+  bottomSpacing: {
+    height: 100, // Space at the bottom to avoid button overlap
+  },
+  reminderButton: {
+    backgroundColor: '#228B22',
+    borderRadius: 50,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    position: 'absolute',
+    bottom: 20,
+    left: '25%',
+    right: '25%',
+    alignItems: 'center',
+  },
+  reminderButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
 });
 
-export default Home;
+export default FarmingGuideScreen;

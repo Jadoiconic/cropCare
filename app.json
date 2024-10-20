@@ -1,5 +1,6 @@
 {
   "expo": {
+    
     "name": "cropCare",
     "slug": "cropCare",
     "version": "1.0.0",
@@ -35,7 +36,8 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true
