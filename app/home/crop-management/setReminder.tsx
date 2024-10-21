@@ -12,8 +12,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { Picker } from '@react-native-picker/picker';
 
+// Types for Reminders
+interface Reminder {
+    title: string;
+    body: string;
+    time: number;
+    unit: string;
+}
+
 // Request notification permissions
-const requestNotificationPermissions = async () => {
+const requestNotificationPermissions = async (): Promise<void> => {
     const { status } = await Notifications.requestPermissionsAsync();
     if (status !== 'granted') {
         Alert.alert('Permission required', 'Notification permissions are required to set reminders.');
@@ -21,7 +29,7 @@ const requestNotificationPermissions = async () => {
 };
 
 // Schedule a reminder with sound and vibration
-const scheduleReminder = async (title: string, body: string, trigger: Notifications.ScheduleNotificationTriggerInput) => {
+const scheduleReminder = async (title: string, body: string, trigger: Notifications.ScheduleNotificationTriggerInput): Promise<void> => {
     await Notifications.scheduleNotificationAsync({
         content: {
             title: title,
@@ -40,26 +48,26 @@ const Home: React.FC = () => {
     const [reminderBody, setReminderBody] = useState<string>('');
     const [reminderTime, setReminderTime] = useState<number | undefined>(undefined);
     const [timeUnit, setTimeUnit] = useState<string>('seconds');
-    const [reminders, setReminders] = useState<any[]>([]);
+    const [reminders, setReminders] = useState<Reminder[]>([]);
 
     useEffect(() => {
         requestNotificationPermissions();
         loadSavedReminders();
     }, []);
 
-    const loadSavedReminders = async () => {
+    const loadSavedReminders = async (): Promise<void> => {
         try {
             const savedReminders = await AsyncStorage.getItem('reminders');
             if (savedReminders) {
-                const remindersArray = JSON.parse(savedReminders);
-                setReminders(remindersArray.sort((a: any, b: any) => b.time - a.time));
+                const remindersArray: Reminder[] = JSON.parse(savedReminders);
+                setReminders(remindersArray.sort((a, b) => b.time - a.time));
             }
         } catch (error) {
             console.error('Error loading reminders:', error);
         }
     };
 
-    const handleSetReminder = async () => {
+    const handleSetReminder = async (): Promise<void> => {
         if (!reminderTitle || !reminderBody || reminderTime === undefined) {
             Alert.alert('Error', 'Please fill in all fields.');
             return;
@@ -75,7 +83,7 @@ const Home: React.FC = () => {
         try {
             await scheduleReminder(reminderTitle, reminderBody, trigger);
 
-            const reminder = {
+            const reminder: Reminder = {
                 title: reminderTitle,
                 body: reminderBody,
                 time: new Date().getTime() + timeInSeconds * 1000,
@@ -97,7 +105,7 @@ const Home: React.FC = () => {
     };
 
     const convertTimeToSeconds = (time: number, unit: string): number => {
-        const timeUnits = {
+        const timeUnits: { [key: string]: number } = {
             seconds: 1,
             minutes: 60,
             days: 86400,
@@ -107,10 +115,10 @@ const Home: React.FC = () => {
         return time * (timeUnits[unit] || 1);
     };
 
-    const saveReminder = async (reminder: { title: string; body: string; time: number; unit: string }) => {
+    const saveReminder = async (reminder: Reminder): Promise<void> => {
         try {
             const savedReminders = await AsyncStorage.getItem('reminders');
-            const remindersArray = savedReminders ? JSON.parse(savedReminders) : [];
+            const remindersArray: Reminder[] = savedReminders ? JSON.parse(savedReminders) : [];
             remindersArray.push(reminder);
             await AsyncStorage.setItem('reminders', JSON.stringify(remindersArray));
         } catch (error) {
@@ -118,7 +126,7 @@ const Home: React.FC = () => {
         }
     };
 
-    const clearInputs = () => {
+    const clearInputs = (): void => {
         setReminderTitle('');
         setReminderBody('');
         setReminderTime(undefined);
@@ -171,8 +179,8 @@ const Home: React.FC = () => {
 };
 
 // DisplayReminders Component
-const DisplayReminders: React.FC<{ reminders: any[] }> = ({ reminders }) => {
-    const calculateTimeRemaining = (time: number) => {
+const DisplayReminders: React.FC<{ reminders: Reminder[] }> = ({ reminders }) => {
+    const calculateTimeRemaining = (time: number): string => {
         const currentTime = new Date().getTime();
         const timeDifference = time - currentTime;
 
