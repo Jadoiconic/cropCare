@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View, FlatList, TouchableOpacity, Alert } from "react-native";
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
 import { db } from "@/services/config"; // Import Firebase config
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import * as Linking from 'expo-linking';
@@ -16,35 +17,65 @@ interface PdfFile {
 }
 
 const PdfScreen = () => {
-  const [pdfFiles, setPdfFiles] = useState<PdfFile[]>([]); // State for storing PDF files
-  const [loading, setLoading] = useState(true); // Loading state
+  const [pdfFiles, setPdfFiles] = useState<PdfFile[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchPdfFiles();
+    const fetchAndSavePdfFiles = async () => {
+      const localFiles = await getLocalFiles();
+      if (localFiles.length > 0) {
+        setPdfFiles(localFiles);
+      }
+      await fetchPdfFiles();
+    };
+
+    fetchAndSavePdfFiles();
   }, []);
 
-  // Function to fetch PDF files from Firestore
+  // Function to fetch PDF files from Firestore and save them to local storage
   const fetchPdfFiles = async () => {
     try {
-      const q = query(collection(db, 'pdfFiles'), orderBy('createdAt', 'desc')); // Query to get files ordered by date
+      const q = query(collection(db, 'pdfFiles'), orderBy('createdAt', 'desc'));
       const querySnapshot = await getDocs(q);
       const files: PdfFile[] = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       } as PdfFile));
+
       setPdfFiles(files); // Update state with fetched files
+      await saveFilesToLocal(files); // Save files to local storage
     } catch (error) {
       console.error("Error fetching PDF files:", error);
       Alert.alert("Error", "Unable to fetch PDF files. Please check your permissions.");
     } finally {
-      setLoading(false); // Stop loading after the fetch
+      setLoading(false);
+    }
+  };
+
+  // Function to save files to local storage
+  const saveFilesToLocal = async (files: PdfFile[]) => {
+    try {
+      await AsyncStorage.setItem('pdfFiles', JSON.stringify(files));
+    } catch (error) {
+      console.error("Error saving files to local storage:", error);
+    }
+  };
+
+  // Function to get files from local storage
+  const getLocalFiles = async (): Promise<PdfFile[]> => {
+    try {
+      const filesString = await AsyncStorage.getItem('pdfFiles');
+      return filesString ? JSON.parse(filesString) : [];
+    } catch (error) {
+      console.error("Error getting files from local storage:", error);
+      return [];
     }
   };
 
   // Function to open PDF URL
   const openPdf = async (url: string) => {
     try {
-      await Linking.openURL(url); // Attempt to open PDF URL
+      await Linking.openURL(url);
     } catch (error) {
       console.error("Error opening PDF:", error);
       Alert.alert('Error', 'Could not open the PDF file.');
@@ -80,6 +111,7 @@ const PdfScreen = () => {
     </View>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {

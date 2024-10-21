@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
+import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage"; // Importing Firebase Storage
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -22,15 +22,16 @@ auth.useDeviceLanguage(); // Ensure that the auth messages are shown in the devi
 const db = getFirestore(app);
 const storage = getStorage(app); // Initialize Firebase Storage
 
-// Enable offline persistence
-enableIndexedDbPersistence(db)
-    .catch((err) => {
-        if (err.code === 'failed-precondition') {
-            console.log("Persistence failed: multiple tabs open.");
-        } else if (err.code === 'unimplemented') {
-            console.log("Persistence is not available in this browser.");
-        }
-    });
+// Note: Enable offline persistence is typically not applicable for React Native
+// Commenting it out for clarity. If you still want to use it, ensure to test accordingly.
+// enableIndexedDbPersistence(db)
+//     .catch((err) => {
+//         if (err.code === 'failed-precondition') {
+//             console.log("Persistence failed: multiple tabs open.");
+//         } else if (err.code === 'unimplemented') {
+//             console.log("Persistence is not available in this browser.");
+//         }
+//     });
 
 // Persist Authentication State
 const persistAuthState = async (user: any) => {

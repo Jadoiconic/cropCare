@@ -9,56 +9,55 @@ import { Ionicons } from '@expo/vector-icons';
 const HomeScreen = () => {
     const router = useRouter();
     const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
-    const [role, setRole] = useState<string | null>(null); // State to store the user's role
-    const [userId, setUserId] = useState<string | null>(null); // State to store user ID
+    const [role, setRole] = useState<string | null>(null);
+    const [userId, setUserId] = useState<string | null>(null);
 
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(async (user) => {
             if (user) {
                 setIsLoggedIn(true);
-                setUserId(user.uid); // Set user ID
-                const userDoc = await getDoc(doc(db, 'farmers', user.uid)); // Assume user roles are stored in 'farmers' collection
+                setUserId(user.uid);
+                const userDoc = await getDoc(doc(db, 'farmers', user.uid));
                 const userData = userDoc.data();
-                setRole(userData?.role); // Get the role (Admin, Expert, Farmer) from Firestore
+                setRole(userData?.role);
             } else {
-                router.push('/auth/'); // Redirect to the auth page if not logged in
+                setIsLoggedIn(false);
+                setRole(null);
+                setUserId(null);
             }
         });
 
         return () => unsubscribe();
     }, [router]);
 
-    // Optionally, return a loading indicator while checking authentication
-    if (!isLoggedIn || !role) {
-        return null; // or a loading spinner
-    }
-
     const renderContent = () => {
-        const farmerItems = [
+        // Common items accessible to both authenticated and unauthenticated users
+        const commonItems = [
             { onPress: () => router.push("/Weather"), icon: "cloud", label: "Iteganya igihe" },
             { onPress: () => router.push("/Lessons"), icon: "stats-chart-outline", label: "Amasomo kubuhinzi" },
             { onPress: () => router.push("/CropManagement"), icon: "leaf-outline", label: "Gukurikirana Igihingwa" },
-            { onPress: () => router.push("/home/Forum"), icon: "people-outline", label: "Uruganiriro" },
+            { onPress: () => promptLogin("/home/Forum"), icon: "people-outline", label: "Uruganiriro" }, // Restricted
             { onPress: () => router.push("/Watering"), icon: "water", label: "Kuhira no Kuvomera" },
-            { onPress: () => router.push("/Pests"), icon: "bug-outline", label: "Ibyonyi n' Indwara" }
+            { onPress: () => promptLogin("/Pests"), icon: "bug-outline", label: "Ibyonyi n' Indwara" } // Restricted
         ];
 
+        // Define role-based items for authenticated users
         const expertItems = [
-            ...farmerItems.slice(0, 2),
+            ...commonItems.slice(0, 2),
             { onPress: () => router.push("/addfile"), icon: "book-outline", label: "Kongeraho Amasomo" },
-            ...farmerItems.slice(3),
-            { onPress: () => router.push("/home/ExpertChat"), icon: "chatbubble", label: "Ganiriza Umuhinzi" }
+            ...commonItems.slice(3),
+            { onPress: () => promptLogin("/home/ExpertChat"), icon: "chatbubble", label: "Ganiriza Umuhinzi" } // Restricted
         ];
 
         const adminItems = [
-            ...farmerItems.slice(0, 2),
+            ...commonItems.slice(0, 2),
             { onPress: () => router.push("/home/manages"), icon: "person", label: "Abakoresha App" },
             { onPress: () => router.push("/addfile"), icon: "book", label: "Kongeraho Infasha Nyigisho" },
-            ...farmerItems.slice(2)
+            ...commonItems.slice(2)
         ];
 
-        const items = role === 'Farmer' ? farmerItems
-            : role === 'Expert' ? expertItems : adminItems;
+        // Display only common items for unauthenticated users
+        const items = isLoggedIn ? (role === 'Farmer' ? commonItems : role === 'Expert' ? expertItems : adminItems) : commonItems;
 
         return (
             items.reduce((rows, item, index) => {
@@ -70,7 +69,7 @@ const HomeScreen = () => {
                 return rows;
             }, []).map((row, index) => (
                 <View key={index} style={styles.row}>
-                    {row.map((item: { onPress: ((event: GestureResponderEvent) => void) | undefined; icon: string | undefined; label: string | number | boolean | React.ReactElement<any, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | null | undefined; }, index: React.Key | null | undefined) => (
+                    {row.map((item, index) => (
                         <TouchableOpacity
                             key={index}
                             onPress={item.onPress}
@@ -85,13 +84,27 @@ const HomeScreen = () => {
         );
     };
 
+    const promptLogin = (route: string) => {
+        // Show a prompt to login and redirect to the login page
+        alert("Please log in to access this feature.");
+        router.push('/auth/');
+    };
+
     return (
         <View style={styles.container}>
-            {userId && role && ( // Pass userId and role to Greeting
+            {isLoggedIn && userId && role && (
                 <Greeting userId={userId} role={role} />
             )}
             <ScrollView style={styles.scrollContainer}>
                 {renderContent()}
+                {!isLoggedIn && (
+                    <TouchableOpacity
+                        style={styles.loginButton}
+                        onPress={() => router.push('/auth/')}
+                    >
+                        <Text style={styles.loginButtonText}>Injira</Text>
+                    </TouchableOpacity>
+                )}
             </ScrollView>
         </View>
     );
@@ -137,5 +150,17 @@ const styles = StyleSheet.create({
         fontWeight: '500',
         textAlign: 'center',
         color: '#333',
+    },
+    loginButton: {
+        backgroundColor: '#8BC34A',
+        borderRadius: 5,
+        padding: 10,
+        alignItems: 'center',
+        marginVertical: 20,
+    },
+    loginButtonText: {
+        color: '#fff',
+        fontSize: 18,
+        fontWeight: 'bold',
     },
 });
