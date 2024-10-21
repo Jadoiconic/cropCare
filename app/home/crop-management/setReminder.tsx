@@ -20,12 +20,15 @@ const requestNotificationPermissions = async () => {
     }
 };
 
-// Schedule a reminder
+// Schedule a reminder with sound and vibration
 const scheduleReminder = async (title: string, body: string, trigger: Notifications.ScheduleNotificationTriggerInput) => {
     await Notifications.scheduleNotificationAsync({
         content: {
             title: title,
             body: body,
+            sound: true,  // Enable sound
+            vibrate: [0, 250, 250, 250],  // Add vibration pattern
+            priority: Notifications.AndroidNotificationPriority.HIGH,
         },
         trigger: trigger,
     });
@@ -49,8 +52,7 @@ const Home: React.FC = () => {
             const savedReminders = await AsyncStorage.getItem('reminders');
             if (savedReminders) {
                 const remindersArray = JSON.parse(savedReminders);
-                const sortedReminders = remindersArray.sort((a: any, b: any) => (b.time || 0) - (a.time || 0));
-                setReminders(sortedReminders);
+                setReminders(remindersArray.sort((a: any, b: any) => b.time - a.time));
             }
         } catch (error) {
             console.error('Error loading reminders:', error);
@@ -59,20 +61,11 @@ const Home: React.FC = () => {
 
     const handleSetReminder = async () => {
         if (!reminderTitle || !reminderBody || reminderTime === undefined) {
-            Alert.alert('Byanze', 'Mwuzuze Imyanya Yose Yagenwe');
+            Alert.alert('Error', 'Please fill in all fields.');
             return;
         }
 
-        let timeInSeconds = reminderTime;
-        if (timeUnit === 'minutes') {
-            timeInSeconds *= 60;
-        } else if (timeUnit === 'days') {
-            timeInSeconds *= 86400;
-        } else if (timeUnit === 'weeks') {
-            timeInSeconds *= 604800;
-        } else if (timeUnit === 'months') {
-            timeInSeconds *= 2628000;
-        }
+        const timeInSeconds = convertTimeToSeconds(reminderTime, timeUnit);
 
         const trigger: Notifications.ScheduleNotificationTriggerInput = {
             seconds: timeInSeconds,
@@ -92,15 +85,26 @@ const Home: React.FC = () => {
 
             setReminders((prevReminders) => {
                 const updatedReminders = [...prevReminders, reminder];
-                return updatedReminders.sort((a, b) => (b.time || 0) - (a.time || 0));
+                return updatedReminders.sort((a, b) => b.time - a.time);
             });
 
-            Alert.alert('Byakunze', 'Urwibutso Rwashyizweho Neza!');
+            Alert.alert('Success', 'Reminder set successfully!');
             clearInputs();
         } catch (error) {
             console.error('Error setting reminder:', error);
-            Alert.alert('Error', 'Gushyiraho Urwibutso Ntibyakunze');
+            Alert.alert('Error', 'Failed to set the reminder.');
         }
+    };
+
+    const convertTimeToSeconds = (time: number, unit: string): number => {
+        const timeUnits = {
+            seconds: 1,
+            minutes: 60,
+            days: 86400,
+            weeks: 604800,
+            months: 2628000,  // Approximate month duration
+        };
+        return time * (timeUnits[unit] || 1);
     };
 
     const saveReminder = async (reminder: { title: string; body: string; time: number; unit: string }) => {
@@ -124,22 +128,22 @@ const Home: React.FC = () => {
     return (
         <View style={styles.container}>
             <ScrollView contentContainerStyle={styles.scrollView}>
-                <Text style={styles.title}>Shyiraho Urwibutso</Text>
+                <Text style={styles.title}>Set Reminder</Text>
                 <TextInput
                     style={styles.input}
-                    placeholder="Injza umutwe W'urwibutso"
+                    placeholder="Enter reminder title"
                     value={reminderTitle}
                     onChangeText={setReminderTitle}
                 />
                 <TextInput
                     style={styles.input}
-                    placeholder="Injizamo Icyo ushaka Kuzibutswa"
+                    placeholder="Enter reminder details"
                     value={reminderBody}
                     onChangeText={setReminderBody}
                 />
                 <TextInput
                     style={styles.input}
-                    placeholder="Injazmo igihe"
+                    placeholder="Enter time"
                     value={reminderTime?.toString()}
                     onChangeText={(value) => setReminderTime(Number(value))}
                     keyboardType="numeric"
@@ -149,14 +153,14 @@ const Home: React.FC = () => {
                     style={styles.picker}
                     onValueChange={(itemValue) => setTimeUnit(itemValue)}
                 >
-                    <Picker.Item label="Amasegonda" value="seconds" />
-                    <Picker.Item label="Iminota" value="minutes" />
-                    <Picker.Item label="Imisi" value="days" />
-                    <Picker.Item label="Ibyumweru" value="weeks" />
-                    <Picker.Item label="Amezi" value="months" />
+                    <Picker.Item label="Seconds" value="seconds" />
+                    <Picker.Item label="Minutes" value="minutes" />
+                    <Picker.Item label="Days" value="days" />
+                    <Picker.Item label="Weeks" value="weeks" />
+                    <Picker.Item label="Months" value="months" />
                 </Picker>
                 <TouchableOpacity style={styles.button} onPress={handleSetReminder}>
-                    <Text style={styles.buttonText}>Shyiraho Urwibutso</Text>
+                    <Text style={styles.buttonText}>Set Reminder</Text>
                 </TouchableOpacity>
 
                 {/* Display the saved reminders */}
