@@ -1,4 +1,3 @@
-// app/screens/Home.tsx
 import React, { useEffect, useState } from 'react';
 import {
     View,
@@ -10,17 +9,37 @@ import {
     ScrollView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { requestNotificationPermissions, scheduleReminder } from '@/services/reminderService';
-import { Picker } from '@react-native-picker/picker'; // Import Picker from the new package
+import * as Notifications from 'expo-notifications';
+import { Picker } from '@react-native-picker/picker';
 
+// Request notification permissions
+const requestNotificationPermissions = async () => {
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status !== 'granted') {
+        Alert.alert('Permission required', 'Notification permissions are required to set reminders.');
+    }
+};
+
+// Schedule a reminder
+const scheduleReminder = async (title: string, body: string, trigger: Notifications.ScheduleNotificationTriggerInput) => {
+    await Notifications.scheduleNotificationAsync({
+        content: {
+            title: title,
+            body: body,
+        },
+        trigger: trigger,
+    });
+};
+
+// Home Component
 const Home: React.FC = () => {
     const [reminderTitle, setReminderTitle] = useState<string>('');
     const [reminderBody, setReminderBody] = useState<string>('');
     const [reminderTime, setReminderTime] = useState<number | undefined>(undefined);
-    const [timeUnit, setTimeUnit] = useState<string>('seconds'); // State to hold the selected time unit
+    const [timeUnit, setTimeUnit] = useState<string>('seconds');
+    const [reminders, setReminders] = useState<any[]>([]);
 
     useEffect(() => {
-        // Request notification permissions on component mount
         requestNotificationPermissions();
         loadSavedReminders();
     }, []);
@@ -30,7 +49,8 @@ const Home: React.FC = () => {
             const savedReminders = await AsyncStorage.getItem('reminders');
             if (savedReminders) {
                 const remindersArray = JSON.parse(savedReminders);
-                console.log('Loaded reminders:', remindersArray);
+                const sortedReminders = remindersArray.sort((a: any, b: any) => (b.time || 0) - (a.time || 0));
+                setReminders(sortedReminders);
             }
         } catch (error) {
             console.error('Error loading reminders:', error);
@@ -43,29 +63,37 @@ const Home: React.FC = () => {
             return;
         }
 
-        // Convert the reminder time based on the selected unit
         let timeInSeconds = reminderTime;
         if (timeUnit === 'minutes') {
             timeInSeconds *= 60;
         } else if (timeUnit === 'days') {
-            timeInSeconds *= 86400; // 24 * 60 * 60
+            timeInSeconds *= 86400;
         } else if (timeUnit === 'weeks') {
-            timeInSeconds *= 604800; // 7 * 24 * 60 * 60
+            timeInSeconds *= 604800;
         } else if (timeUnit === 'months') {
-            timeInSeconds *= 2628000; // Approximate for a month
+            timeInSeconds *= 2628000;
         }
 
-        const trigger: Notifications.ScheduleNotificationInput = {
-            seconds: timeInSeconds, // Set the reminder time in seconds
+        const trigger: Notifications.ScheduleNotificationTriggerInput = {
+            seconds: timeInSeconds,
             repeats: false,
         };
 
         try {
             await scheduleReminder(reminderTitle, reminderBody, trigger);
 
-            // Save the reminder to local storage
-            const reminder = { title: reminderTitle, body: reminderBody, time: reminderTime, unit: timeUnit };
+            const reminder = {
+                title: reminderTitle,
+                body: reminderBody,
+                time: new Date().getTime() + timeInSeconds * 1000,
+                unit: timeUnit,
+            };
             await saveReminder(reminder);
+
+            setReminders((prevReminders) => {
+                const updatedReminders = [...prevReminders, reminder];
+                return updatedReminders.sort((a, b) => (b.time || 0) - (a.time || 0));
+            });
 
             Alert.alert('Byakunze', 'Urwibutso Rwashyizweho Neza!');
             clearInputs();
@@ -75,7 +103,7 @@ const Home: React.FC = () => {
         }
     };
 
-    const saveReminder = async (reminder: { title: string; body: string; time: number | undefined; unit: string }) => {
+    const saveReminder = async (reminder: { title: string; body: string; time: number; unit: string }) => {
         try {
             const savedReminders = await AsyncStorage.getItem('reminders');
             const remindersArray = savedReminders ? JSON.parse(savedReminders) : [];
@@ -90,7 +118,7 @@ const Home: React.FC = () => {
         setReminderTitle('');
         setReminderBody('');
         setReminderTime(undefined);
-        setTimeUnit('seconds'); // Reset time unit to default
+        setTimeUnit('seconds');
     };
 
     return (
@@ -130,11 +158,45 @@ const Home: React.FC = () => {
                 <TouchableOpacity style={styles.button} onPress={handleSetReminder}>
                     <Text style={styles.buttonText}>Shyiraho Urwibutso</Text>
                 </TouchableOpacity>
+
+                {/* Display the saved reminders */}
+                <DisplayReminders reminders={reminders} />
             </ScrollView>
         </View>
     );
 };
 
+// DisplayReminders Component
+const DisplayReminders: React.FC<{ reminders: any[] }> = ({ reminders }) => {
+    const calculateTimeRemaining = (time: number) => {
+        const currentTime = new Date().getTime();
+        const timeDifference = time - currentTime;
+
+        if (timeDifference <= 0) {
+            return 'Expired';
+        } else {
+            const hours = Math.floor(timeDifference / (1000 * 60 * 60));
+            const minutes = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
+            return `Pending - ${hours}h ${minutes}m remaining`;
+        }
+    };
+
+    return (
+        <View>
+            {reminders.map((reminder, index) => (
+                <View key={index} style={styles.reminderItem}>
+                    <Text style={styles.reminderTitle}>{reminder.title}</Text>
+                    <Text>{reminder.body}</Text>
+                    <Text style={styles.reminderStatus}>
+                        {calculateTimeRemaining(reminder.time)}
+                    </Text>
+                </View>
+            ))}
+        </View>
+    );
+};
+
+// Styles
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -178,7 +240,20 @@ const styles = StyleSheet.create({
     buttonText: {
         color: '#fff',
         fontSize: 18,
+    },
+    reminderItem: {
+        backgroundColor: '#fff',
+        padding: 10,
+        marginVertical: 5,
+        borderRadius: 5,
+    },
+    reminderTitle: {
         fontWeight: 'bold',
+        fontSize: 18,
+    },
+    reminderStatus: {
+        marginTop: 5,
+        color: 'gray',
     },
 });
 

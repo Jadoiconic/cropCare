@@ -85,7 +85,7 @@ const _layout = () => {
         }}
       />
       <Tabs.Screen
-        name="Notifications"
+        name="crop-management/setReminder"
         options={{
           title: 'Amamenyesha',
           tabBarIcon: ({ size, color }) => <FontAwesome name="bell" size={size} color={color} />,
@@ -134,13 +134,7 @@ const _layout = () => {
           title: 'Ganira',
         }}
       />
-       <Tabs.Screen
-        name="crop-management/setReminder"
-        options={{
-          tabBarButton: () => null,
-          title: 'Pangira igihingwa',
-        }}
-      />
+      
       <Tabs.Screen
         name="manages"
         options={{
@@ -148,7 +142,7 @@ const _layout = () => {
           title: 'Admin Management',
         }}
       />
-      
+
     </Tabs>
   );
 };
