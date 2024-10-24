@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, GestureResponderEvent } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import Greeting from '@/components/Greeting';
 import { useRouter } from 'expo-router';
@@ -11,34 +11,47 @@ const HomeScreen = () => {
     const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
     const [role, setRole] = useState<string | null>(null);
     const [userId, setUserId] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(async (user) => {
+            setLoading(true); // Start loading
             if (user) {
                 setIsLoggedIn(true);
                 setUserId(user.uid);
-                const userDoc = await getDoc(doc(db, 'farmers', user.uid));
-                const userData = userDoc.data();
-                setRole(userData?.role);
+                try {
+                    const userDoc = await getDoc(doc(db, 'farmers', user.uid));
+                    if (userDoc.exists()) {
+                        const userData = userDoc.data();
+                        setRole(userData?.role); // Store user role
+                    } else {
+                        console.error("User document does not exist.");
+                        setRole(null);
+                    }
+                } catch (error) {
+                    console.error("Error fetching user role:", error);
+                    setRole(null);
+                }
             } else {
                 setIsLoggedIn(false);
                 setRole(null);
                 setUserId(null);
             }
+            setLoading(false); // End loading
         });
 
         return () => unsubscribe();
     }, [router]);
 
     const renderContent = () => {
-        // Common items accessible to both authenticated and unauthenticated users
+        // Define common items accessible to all users
         const commonItems = [
             { onPress: () => router.push("/Weather"), icon: "cloud", label: "Iteganya igihe" },
             { onPress: () => router.push("/Lessons"), icon: "stats-chart-outline", label: "Amasomo kubuhinzi" },
             { onPress: () => router.push("/CropManagement"), icon: "leaf-outline", label: "Gukurikirana Igihingwa" },
-            { onPress: () => promptLogin("/home/Forum"), icon: "people-outline", label: "Uruganiriro" }, // Restricted
+            { onPress: () => router.push("/home/Forum"), icon: "people-outline", label: "Uruganiriro" }, // No restriction
             { onPress: () => router.push("/Watering"), icon: "water", label: "Kuhira no Kuvomera" },
-            { onPress: () => promptLogin("/Pests"), icon: "bug-outline", label: "Ibyonyi n' Indwara" } // Restricted
+            { onPress: () => router.push("/Pests"), icon: "bug-outline", label: "Ibyonyi n' Indwara" } // No restriction
         ];
 
         // Define role-based items for authenticated users
@@ -46,7 +59,7 @@ const HomeScreen = () => {
             ...commonItems.slice(0, 2),
             { onPress: () => router.push("/addfile"), icon: "book-outline", label: "Kongeraho Amasomo" },
             ...commonItems.slice(3),
-            { onPress: () => promptLogin("/home/ExpertChat"), icon: "chatbubble", label: "Ganiriza Umuhinzi" } // Restricted
+            { onPress: () => router.push("/home/ExpertChat"), icon: "chatbubble", label: "Ganiriza Umuhinzi" } // No restriction
         ];
 
         const adminItems = [
@@ -56,8 +69,17 @@ const HomeScreen = () => {
             ...commonItems.slice(2)
         ];
 
-        // Display only common items for unauthenticated users
-        const items = isLoggedIn ? (role === 'Farmer' ? commonItems : role === 'Expert' ? expertItems : adminItems) : commonItems;
+        // Determine items based on login and role
+        let items = commonItems; // Default to common items
+        if (isLoggedIn) {
+            if (role === 'Farmer') {
+                items = commonItems; // Farmers see common items
+            } else if (role === 'Expert') {
+                items = expertItems; // Experts see expert items
+            } else if (role === 'Admin') {
+                items = adminItems; // Admins see admin items
+            }
+        }
 
         return (
             items.reduce((rows, item, index) => {
@@ -84,11 +106,9 @@ const HomeScreen = () => {
         );
     };
 
-    const promptLogin = (route: string) => {
-        // Show a prompt to login and redirect to the login page
-        alert("Please log in to access this feature.");
-        router.push('/auth/');
-    };
+    if (loading) {
+        return <ActivityIndicator size="large" color="#0000ff" />;
+    }
 
     return (
         <View style={styles.container}>

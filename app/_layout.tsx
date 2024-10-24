@@ -106,7 +106,7 @@ export default function Layout() {
         />
 
         <Drawer.Screen
-          name='index'
+          name='guide'
           options={{
             drawerLabel: 'Igenamiterere',
             headerTitle: 'Igenamiterere',
@@ -127,15 +127,9 @@ export default function Layout() {
             headerShown: false,
           }} 
         />
+        
         <Drawer.Screen
-          name="manages"
-          options={{
-            drawerItemStyle: { display: 'none' },
-            headerShown: false,
-          }} 
-        />
-        <Drawer.Screen
-          name="ExpertChat"
+          name="index"
           options={{
             drawerItemStyle: { display: 'none' },
             headerShown: false,
