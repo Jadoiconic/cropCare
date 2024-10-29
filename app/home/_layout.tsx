@@ -88,7 +88,7 @@ const _layout = () => {
         name="crop-management/setReminder"
         options={{
           title: 'Amamenyesha',
-          tabBarIcon: ({ size, color }) => <FontAwesome name="bell" size={size} color={color} />,
+          tabBarIcon: ({ size, color }) => <FontAwesome name="clock-o" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -139,7 +139,7 @@ const _layout = () => {
         name="manages"
         options={{
           tabBarButton: () => null,
-          title: 'Admin Management',
+          title: 'User Management',
         }}
       />
 
