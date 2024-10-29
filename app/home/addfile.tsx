@@ -50,11 +50,26 @@ export default function UploadScreen() {
   };
 
   const uploadPdf = async () => {
+    // Validation for title and description
+    const titleValidation = /^(?=.*[a-zA-Z])[a-zA-Z0-9\s]+$/; // must contain at least one letter, allows alphanumeric and spaces
+    const descriptionValidation = /^(?=.*[a-zA-Z])[a-zA-Z0-9\s]+$/; // must contain at least one letter, allows alphanumeric and spaces
+
     if (!title.trim() || !description.trim()) {
       Alert.alert("Input Error", "Please enter both title and description.");
       return;
     }
 
+    if (!titleValidation.test(title)) {
+      Alert.alert("Input Error", "Title must contain at least one letter and can include letters, numbers, and spaces.");
+      return;
+    }
+
+    if (!descriptionValidation.test(description)) {
+      Alert.alert("Input Error", "Description must contain at least one letter and can include letters, numbers, and spaces.");
+      return;
+    }
+
+    // Proceed with file selection only after validation
     try {
       const result = await DocumentPicker.getDocumentAsync({ type: "application/pdf" });
 
@@ -158,7 +173,7 @@ export default function UploadScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Upload PDF</Text>
+      <Text style={styles.title}>Shyiraho Ibitabo Byubuhinzi</Text>
 
       <TextInput
         style={styles.input}
@@ -194,7 +209,7 @@ export default function UploadScreen() {
 
       {uploadSuccess && <Text style={styles.successMessage}>PDF uploaded successfully!</Text>}
 
-      <Text style={styles.existingFilesTitle}>Existing Files</Text>
+      <Text style={styles.existingFilesTitle}>Ibitabo Bisanzwe Bihari</Text>
       <FlatList
         data={files}
         renderItem={renderFileItem}
@@ -215,7 +230,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8f9fa",
   },
   title: {
-    fontSize: 28,
+    fontSize: 20,
     marginBottom: 20,
     fontWeight: "bold",
     color: "#333",
@@ -288,7 +303,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     padding: 10,
     backgroundColor: "#dc3545",
-    borderRadius: 5,
+    borderRadius: 8,
     alignItems: "center",
   },
 });

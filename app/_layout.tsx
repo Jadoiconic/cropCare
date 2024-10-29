@@ -120,13 +120,7 @@ export default function Layout() {
             headerShown: false,
           }} 
         />
-        <Drawer.Screen
-          name="addfile"
-          options={{
-            drawerItemStyle: { display: 'none' },
-            headerShown: false,
-          }} 
-        />
+       
         
         <Drawer.Screen
           name="index"

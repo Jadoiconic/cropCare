@@ -57,7 +57,7 @@ const HomeScreen = () => {
         // Define role-based items for authenticated users
         const expertItems = [
             ...commonItems.slice(0, 2),
-            { onPress: () => router.push("/addfile"), icon: "book-outline", label: "Kongeraho Amasomo" },
+            { onPress: () => router.push("/home/addfile"), icon: "book-outline", label: "Kongeraho Amasomo" },
             ...commonItems.slice(3),
             { onPress: () => router.push("/home/ExpertChat"), icon: "chatbubble", label: "Ganiriza Umuhinzi" } // No restriction
         ];
@@ -65,7 +65,7 @@ const HomeScreen = () => {
         const adminItems = [
             ...commonItems.slice(0, 2),
             { onPress: () => router.push("/home/manages"), icon: "person", label: "Abakoresha App" },
-            { onPress: () => router.push("/addfile"), icon: "book", label: "Kongeraho Infasha Nyigisho" },
+            { onPress: () => router.push("/home/addfile"), icon: "book", label: "Kongeraho Infasha Nyigisho" },
             ...commonItems.slice(2)
         ];
 

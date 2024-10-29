@@ -142,6 +142,13 @@ const _layout = () => {
           title: 'User Management',
         }}
       />
+      <Tabs.Screen
+        name="addfile"
+        options={{
+          tabBarButton: () => null,
+          title: 'Aho Bongerera Amasomo',
+        }}
+      />
 
     </Tabs>
   );
