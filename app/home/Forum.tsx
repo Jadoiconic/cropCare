@@ -66,7 +66,7 @@ const Forum = () => {
     const [imageUri, setImageUri] = useState(null);
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
-    const currentUser = auth.currentUser?.email;
+    const currentUser = auth.currentUser; // Get the current user
 
     // Request camera roll permission on mount
     useEffect(() => {
@@ -82,11 +82,6 @@ const Forum = () => {
 
     // Fetch posts on component mount
     useEffect(() => {
-        if (!currentUser) {
-            router.push("/auth");
-            return;
-        }
-
         const fetchPosts = async () => {
             try {
                 const fetchedPosts = await getPosts();
@@ -96,7 +91,9 @@ const Forum = () => {
             }
         };
 
-        fetchPosts();
+        if (currentUser) {
+            fetchPosts();
+        }
     }, [currentUser]);
 
     const handleCreatePost = async () => {
@@ -130,41 +127,56 @@ const Forum = () => {
         setSelectedImage(null);
     };
 
+    // Conditional rendering for authenticated and unauthenticated users
     return (
         <View style={styles.container}>
-            <View style={styles.inputContainer}>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Andika igitekerezo..."
-                    value={newPostContent}
-                    onChangeText={setNewPostContent}
-                />
-                <Button title="Posta" onPress={handleCreatePost} />
-            </View>
-            <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
-                <Text style={styles.imagePickerText}>Hitamo ifoto</Text>
-            </TouchableOpacity>
-            {imageUri && <Image source={{ uri: imageUri }} style={styles.imagePreview} />}
-            
-            <FlatList
-                data={posts}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => <Post post={item} onImagePress={openImage} />}
-                extraData={posts}
-            />
+            {currentUser ? (
+                <>
+                    <View style={styles.inputContainer}>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Andika igitekerezo..."
+                            value={newPostContent}
+                            onChangeText={setNewPostContent}
+                        />
+                        <Button title="Posta" onPress={handleCreatePost} />
+                    </View>
+                    <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
+                        <Text style={styles.imagePickerText}>Hitamo ifoto</Text>
+                    </TouchableOpacity>
+                    {imageUri && <Image source={{ uri: imageUri }} style={styles.imagePreview} />}
+                    
+                    <FlatList
+                        data={posts}
+                        keyExtractor={(item) => item.id}
+                        renderItem={({ item }) => <Post post={item} onImagePress={openImage} />}
+                        extraData={posts}
+                    />
 
-            <TouchableOpacity style={styles.chatButton} onPress={() => router.push('/home/Chats')}>
-                <Text style={styles.chatButtonText}>Twandikire Abajyanama</Text>
-            </TouchableOpacity>
+                    <TouchableOpacity style={styles.chatButton} onPress={() => router.push('/home/Chats')}>
+                        <Text style={styles.chatButtonText}>Twandikire Abajyanama</Text>
+                    </TouchableOpacity>
 
-            <Modal visible={modalVisible} transparent={true}>
-                <View style={styles.modalContainer}>
-                    <Image source={{ uri: selectedImage }} style={styles.fullScreenImage} />
-                    <TouchableOpacity onPress={closeImageModal} style={styles.closeButton}>
-                        <Text style={styles.closeButtonText}>Close</Text>
+                    <Modal visible={modalVisible} transparent={true}>
+                        <View style={styles.modalContainer}>
+                            <Image source={{ uri: selectedImage }} style={styles.fullScreenImage} />
+                            <TouchableOpacity onPress={closeImageModal} style={styles.closeButton}>
+                                <Text style={styles.closeButtonText}>Close</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </Modal>
+                </>
+            ) : (
+                <View style={styles.unauthContainer}>
+                    <Text style={styles.unauthText}>Please log in to access the Forum.</Text>
+                    <TouchableOpacity
+                        style={styles.redirectButton}
+                        onPress={() => router.push('/auth')}
+                    >
+                        <Text style={styles.redirectButtonText}>Go to Login</Text>
                     </TouchableOpacity>
                 </View>
-            </Modal>
+            )}
         </View>
     );
 };
@@ -273,90 +285,102 @@ const styles = StyleSheet.create({
     imagePicker: {
         backgroundColor: '#007bff',
         padding: 10,
-        borderRadius: 10,
+        borderRadius: 5,
         alignItems: 'center',
-        marginBottom: 10,
+        marginVertical: 10,
     },
     imagePickerText: {
         color: '#fff',
-        fontWeight: 'bold',
     },
     imagePreview: {
-        width: '100%',
-        height: 200,
+        width: 100,
+        height: 100,
         borderRadius: 10,
-        marginBottom: 10,
+        marginVertical: 10,
     },
     post: {
-        backgroundColor: '#f9f9f9',
-        padding: 15,
-        borderRadius: 10,
-        marginBottom: 10,
+        marginBottom: 15,
+        padding: 10,
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 5,
     },
     postText: {
         fontSize: 16,
         marginBottom: 5,
     },
     postOwnerText: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        marginBottom: 5,
+        fontSize: 12,
+        color: '#555',
     },
     postImage: {
         width: '100%',
         height: 200,
         borderRadius: 10,
+        marginVertical: 10,
     },
     replyText: {
-        color: '#007bff',
-        marginTop: 5,
+        color: '#007bff', // Bootstrap blue color
+        marginVertical: 5,
     },
     replyInputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 5,
+        marginVertical: 5,
     },
     replyButton: {
-        color: '#007bff',
-        marginLeft: 10,
+        color: '#28a745', // Green color
     },
     repliesContainer: {
-        marginTop: 10,
+        paddingLeft: 10,
     },
     chatButton: {
-        backgroundColor: '#fff',
-        borderColor: '#28a745',
-        borderWidth: 2,
-        borderRadius: 10,
-        padding: 15,
+        backgroundColor: '#007bff',
+        padding: 10,
+        borderRadius: 5,
         alignItems: 'center',
-        marginTop: 20,
+        marginTop: 10,
     },
     chatButtonText: {
-        color: '#28a745',
+        color: '#fff',
         fontWeight: 'bold',
     },
     modalContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.8)',
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
     },
     fullScreenImage: {
-        width: '90%',
-        height: '80%',
-        borderRadius: 10,
+        width: '100%',
+        height: '100%',
+        resizeMode: 'contain',
     },
     closeButton: {
         position: 'absolute',
-        top: 40,
+        top: 50,
         right: 20,
-        backgroundColor: '#fff',
+    },
+    closeButtonText: {
+        color: '#fff',
+        fontSize: 18,
+    },
+    unauthContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    unauthText: {
+        fontSize: 18,
+        marginBottom: 20,
+    },
+    redirectButton: {
+        backgroundColor: '#007bff',
         padding: 10,
         borderRadius: 5,
     },
-    closeButtonText: {
-        color: '#000',
-        fontWeight: 'bold',
+    redirectButtonText: {
+        color: '#fff',
+        fontSize: 16,
     },
 });

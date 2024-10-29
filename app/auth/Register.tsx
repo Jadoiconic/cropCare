@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import {
     StyleSheet,
     Text,
@@ -6,56 +7,67 @@ import {
     ActivityIndicator,
 } from "react-native";
 import { TextInput } from "react-native-gesture-handler";
-import { useState } from "react";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth, db } from "@/services/config"; // Adjusted import statement for Firebase
-import { doc, setDoc } from "firebase/firestore"; // Import Firestore methods
+import { auth, db } from "@/services/config"; // Firebase config
+import { doc, setDoc, getDocs, collection, query, where } from "firebase/firestore";
 import { useRouter } from "expo-router";
-import React from "react";
 
 const RegisterScreen = () => {
     const router = useRouter();
-    const [email, setEmail] = useState(""); // State for email
-    const [password, setPassword] = useState(""); // State for password
-    const [newUserName, setNewUserName] = useState(""); // State for first name
-    const [loading, setLoading] = useState(false); // State for loading indicator
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [newUserName, setNewUserName] = useState("");
+    const [loading, setLoading] = useState(false);
     const [role] = useState("Farmer"); // Default role
 
     const handleRegister = async () => {
         setLoading(true);
+
         try {
+            // Check if the username is unique
+            const usernameQuery = query(
+                collection(db, "farmers"),
+                where("name", "==", newUserName)
+            );
+            const usernameSnapshot = await getDocs(usernameQuery);
+
+            if (!usernameSnapshot.empty) {
+                alert("Username already exists. Please choose a different username.");
+                setLoading(false);
+                return;
+            }
+
+            // Register with Firebase Auth
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
 
-            // After successful registration, store user data in Firestore
+            // Store user data in Firestore after registration
             await setDoc(doc(db, "farmers", user.uid), {
                 email: user.email,
                 name: newUserName,
                 role: role,
-                createdAt: new Date().toISOString(), // Optional: Add timestamp
-                // Add other fields as necessary
+                createdAt: new Date().toISOString(),
             });
 
-            // Navigate to login or another screen after successful registration
-            alert("Kwiyandikisha Byagenze Neza!");
-            router.push("/auth/"); // Change this to your login screen route
+            alert("Registration successful!");
+            router.push("/auth/"); // Adjust route as needed
         } catch (error) {
-            alert("Kwiyandikisha Ntibyakunze! " + error.message); // Display error message
+            alert("Registration failed! " + error.message);
         } finally {
-            setLoading(false); // Reset loading state
+            setLoading(false);
         }
     };
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>IYANDIKISHE</Text>
+            <Text style={styles.title}>Register</Text>
             <View style={styles.form}>
                 <View style={styles.inputContainer}>
-                    <Text style={styles.label}>Amazina</Text>
+                    <Text style={styles.label}>Username</Text>
                     <TextInput
-                        placeholder="Injiza Amazina"
+                        placeholder="Enter username"
                         value={newUserName}
-                        onChangeText={setNewUserName} // Corrected to update state
+                        onChangeText={setNewUserName}
                         style={styles.input}
                     />
                 </View>
@@ -63,7 +75,7 @@ const RegisterScreen = () => {
                 <View style={styles.inputContainer}>
                     <Text style={styles.label}>Email</Text>
                     <TextInput
-                        placeholder="Injiza Imeli"
+                        placeholder="Enter email"
                         autoCapitalize="none"
                         value={email}
                         onChangeText={setEmail}
@@ -72,9 +84,9 @@ const RegisterScreen = () => {
                 </View>
 
                 <View style={styles.inputContainer}>
-                    <Text style={styles.label}>Injiza Ijambo Banga</Text>
+                    <Text style={styles.label}>Password</Text>
                     <TextInput
-                        placeholder="Ijambo banga"
+                        placeholder="Enter password"
                         value={password}
                         onChangeText={setPassword}
                         style={styles.input}
@@ -83,7 +95,7 @@ const RegisterScreen = () => {
                 </View>
 
                 <TouchableOpacity
-                    style={[styles.button, { backgroundColor: loading ? "gray" : "#4CAF50" }]} // Green primary color
+                    style={[styles.button, { backgroundColor: loading ? "gray" : "#4CAF50" }]}
                     disabled={loading}
                     onPress={handleRegister}
                 >
@@ -91,15 +103,13 @@ const RegisterScreen = () => {
                         {loading ? (
                             <ActivityIndicator size={30} color="#fff" />
                         ) : (
-                            <Text style={styles.buttonText}>Iyandikishe</Text>
+                            <Text style={styles.buttonText}>Register</Text>
                         )}
                     </View>
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={() => router.push("/auth/")}>
-                    <Text style={styles.linkText}>
-                        Usanzwe Ufite Konti? Injira
-                    </Text>
+                    <Text style={styles.linkText}>Already have an account? Sign in</Text>
                 </TouchableOpacity>
             </View>
         </View>
@@ -113,17 +123,17 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
         height: "100%",
-        padding: 20, // Added padding for better spacing
+        padding: 20,
     },
     form: {
         width: "100%",
-        padding: 20, // Adjusted form padding
+        padding: 20,
     },
     input: {
         width: "100%",
         height: 50,
         borderWidth: 1,
-        borderColor: "#BDBDBD", // Changed border color for better visibility
+        borderColor: "#BDBDBD",
         borderRadius: 5,
         paddingHorizontal: 20,
         fontSize: 18,
@@ -139,7 +149,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 30,
         fontWeight: "bold",
-        marginBottom: 20, // Added margin for spacing
+        marginBottom: 20,
     },
     button: {
         paddingVertical: 15,
@@ -154,7 +164,7 @@ const styles = StyleSheet.create({
         textAlign: "center",
     },
     linkText: {
-        color: "#4CAF50", // Green color for the link
+        color: "#4CAF50",
         textAlign: "center",
         marginTop: 20,
     },

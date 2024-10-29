@@ -38,9 +38,9 @@ const _layout = () => {
 
   const handleTabPress = () => {
     if (userRole === 'Expert') {
-      router.replace('/home/expert_home');
+      router.replace('/home/');
     } else if (userRole === 'Admin') {
-      router.replace('/home/admin_home');
+      router.replace('/home/');
     } else {
       router.replace('/home'); // Redirect Farmer or any other role to index
     }

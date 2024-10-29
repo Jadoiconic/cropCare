@@ -78,7 +78,10 @@ const Greeting: React.FC<{ userId: string; role: string | null }> = ({ userId, r
                         onPress={() => router.push('/home/Chats')} // Navigate to the chat screen
                         style={styles.chatButton}
                     >
-                        <Ionicons name="chatbubble" size={30} color="white" />
+                        <View style={styles.chatIconContainer}>
+                            <Ionicons name="chatbubble" size={24} color="white" />
+                            <Text style={styles.chatButtonText}>Ganira Numujyanama</Text>
+                        </View>
                     </TouchableOpacity>
                 )}
             </View>
@@ -124,9 +127,20 @@ const styles = StyleSheet.create({
     },
     chatButton: {
         backgroundColor: 'green', // White-green color
-        padding: 10,
+        padding: 16,
         borderRadius: 20,
-        alignSelf: 'flex-start', // Adjust to align at top right
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 80, // Fixed width to prevent overflow
+    },
+    chatIconContainer: {
+        alignItems: 'center', // Center align icon and text
+    },
+    chatButtonText: {
+        color: 'white',
+        marginTop: 5, // Space between icon and text
+        fontSize: 12, // Smaller font size for better fit
+        textAlign: 'center', // Center text
     },
 });
 

@@ -21,19 +21,7 @@ const auth = getAuth(app);
 auth.useDeviceLanguage(); // Ensure that the auth messages are shown in the device's language
 const db = getFirestore(app);
 const storage = getStorage(app); // Initialize Firebase Storage
-
-// Note: Enable offline persistence is typically not applicable for React Native
-// Commenting it out for clarity. If you still want to use it, ensure to test accordingly.
-// enableIndexedDbPersistence(db)
-//     .catch((err) => {
-//         if (err.code === 'failed-precondition') {
-//             console.log("Persistence failed: multiple tabs open.");
-//         } else if (err.code === 'unimplemented') {
-//             console.log("Persistence is not available in this browser.");
-//         }
-//     });
-
-// Persist Authentication State
+//persist authenticationn state
 const persistAuthState = async (user: any) => {
     try {
         if (user) {
