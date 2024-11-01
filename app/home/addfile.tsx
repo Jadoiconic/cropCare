@@ -55,17 +55,17 @@ export default function UploadScreen() {
     const descriptionValidation = /^(?=.*[a-zA-Z])[a-zA-Z0-9\s]+$/; // must contain at least one letter, allows alphanumeric and spaces
 
     if (!title.trim() || !description.trim()) {
-      Alert.alert("Input Error", "Please enter both title and description.");
+      Alert.alert("Ikibazo Mukwandika", "Mwandike Umutwe Nubusobanuro Bwigitabo.");
       return;
     }
 
     if (!titleValidation.test(title)) {
-      Alert.alert("Input Error", "Title must contain at least one letter and can include letters, numbers, and spaces.");
+      Alert.alert("Ikibazo Mukwandika", "Umutwe W'igitabo ugomba Kuba ugizwe ninyuguti.");
       return;
     }
 
     if (!descriptionValidation.test(description)) {
-      Alert.alert("Input Error", "Description must contain at least one letter and can include letters, numbers, and spaces.");
+      Alert.alert("Ikibazo Mukwandika", "Ibisobanuro By'igitabo bigomba kuba bigizwe ninyuguti.");
       return;
     }
 
@@ -74,7 +74,7 @@ export default function UploadScreen() {
       const result = await DocumentPicker.getDocumentAsync({ type: "application/pdf" });
 
       if (result.type === "cancel") {
-        Alert.alert("Upload Cancelled", "No file was selected.");
+        Alert.alert("Gusakaza Byahagaritwe", "Ntagitabo mwahisemo.");
         return;
       }
 
@@ -95,11 +95,11 @@ export default function UploadScreen() {
         if (!existingFilesSnapshot.empty) {
           const confirmReplace = await new Promise((resolve) => {
             Alert.alert(
-              "File Exists",
-              "A file with this name already exists. Do you want to replace it?",
+              "Igitabo Kirahari",
+              "Igitabo Gifite Izina Nkiri Gisanzwe Gihari Urashaka Kugisimbuza?",
               [
-                { text: "Cancel", onPress: () => resolve(false), style: "cancel" },
-                { text: "Replace", onPress: () => resolve(true) },
+                { text: "Funga", onPress: () => resolve(false), style: "cancel" },
+                { text: "Simbuza", onPress: () => resolve(true) },
               ]
             );
           });
@@ -126,16 +126,16 @@ export default function UploadScreen() {
 
         await addDoc(collection(db, "pdfFiles"), pdfDoc);
         setUploadSuccess(true);
-        Alert.alert("Success", "PDF uploaded successfully!");
+        Alert.alert("Byakunze", "Igitabo Cyasakajwe neza!");
 
         fetchFiles();
         resetForm();
       } else {
-        Alert.alert("Upload Error", "No file selected or upload failed.");
+        Alert.alert("Ikibazo Mugusakaza IGitabo", "Ntagitabo Mwahisemo.");
       }
     } catch (error) {
-      console.error("Error uploading file: ", error);
-      Alert.alert("Upload Error", "Failed to upload PDF. Please try again.");
+      console.error("Ikibazo Mugusakaza igitabo: ", error);
+      Alert.alert("Byanze", "Gusakaze Igitabo byanze Ongera Ugerageze.");
     } finally {
       setLoading(false);
     }
@@ -144,11 +144,11 @@ export default function UploadScreen() {
   const deleteFile = async (fileId: string) => {
     try {
       await deleteDoc(doc(db, "pdfFiles", fileId));
-      Alert.alert("Success", "File deleted successfully!");
+      Alert.alert("Byakunze", "Igitabo Cyasibwe neza!");
       fetchFiles();
     } catch (error) {
       console.error("Error deleting file: ", error);
-      Alert.alert("Delete Error", "Failed to delete the file. Please try again.");
+      Alert.alert("Byanze!", "Gusiba Igitabo Ntibyakunze Ongera Ugerageze");
     }
   };
 
@@ -166,7 +166,7 @@ export default function UploadScreen() {
       <Text style={styles.fileInfo}>Size: {item.size} bytes</Text>
       <Text style={styles.fileInfo}>Type: {item.type}</Text>
       <TouchableOpacity style={styles.deleteButton} onPress={() => deleteFile(item.id)}>
-        <Text style={styles.buttonText}>Delete</Text>
+        <Text style={styles.buttonText}>Siba</Text>
       </TouchableOpacity>
     </View>
   );
@@ -177,14 +177,14 @@ export default function UploadScreen() {
 
       <TextInput
         style={styles.input}
-        placeholder="Enter Title"
+        placeholder="Injiza Umutwe wigitabo"
         value={title}
         onChangeText={setTitle}
       />
 
       <TextInput
         style={styles.input}
-        placeholder="Enter Description"
+        placeholder="Sobanura muri make Igitabo"
         value={description}
         onChangeText={setDescription}
         multiline
@@ -193,7 +193,7 @@ export default function UploadScreen() {
 
       {fileName && (
         <View>
-          <Text style={styles.filePreview}>Selected File: {fileName}</Text>
+          <Text style={styles.filePreview}>Hitamo Igitabo: {fileName}</Text>
           <Text style={styles.fileInfo}>Size: {fileSize} bytes</Text>
           <Text style={styles.fileInfo}>Type: {fileType}</Text>
         </View>
@@ -203,11 +203,11 @@ export default function UploadScreen() {
         {loading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.buttonText}>Select and Upload PDF</Text>
+          <Text style={styles.buttonText}>Hitamo Igitabo Cyo Gusakaza</Text>
         )}
       </TouchableOpacity>
 
-      {uploadSuccess && <Text style={styles.successMessage}>PDF uploaded successfully!</Text>}
+      {uploadSuccess && <Text style={styles.successMessage}>Igitabo Cyasakajwe Neza!</Text>}
 
       <Text style={styles.existingFilesTitle}>Ibitabo Bisanzwe Bihari</Text>
       <FlatList

@@ -32,7 +32,7 @@ const LoginScreen = () => {
 
             // Check if the username exists
             if (querySnapshot.empty) {
-                alert("Username not found. Please check and try again.");
+                alert("Izina Winjije Ntabwo Ribashije Kuboneka Reba Ko Waryanditse neza Wongere Ugerageze");
                 setLoading(false);
                 return;
             }
@@ -47,10 +47,10 @@ const LoginScreen = () => {
             // Store user data in AsyncStorage
             await AsyncStorage.setItem("user", JSON.stringify(userData));
 
-            alert("Login successful!");
+            alert("Kwinjira Byagenze Neza!");
             router.push("/home"); // Adjust route as needed
         } catch (error) {
-            alert("Login failed! " + error.message);
+            alert("Kwinjira Byanze! " + error.message);
         } finally {
             setLoading(false);
         }
@@ -58,12 +58,12 @@ const LoginScreen = () => {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Login</Text>
+            <Text style={styles.title}>Injira</Text>
             <View style={styles.form}>
                 <View style={styles.inputContainer}>
-                    <Text style={styles.label}>Username</Text>
+                    <Text style={styles.label}>Izina</Text>
                     <TextInput
-                        placeholder="Enter username"
+                        placeholder="Injiza Izina Ukoresha"
                         value={username}
                         onChangeText={setUsername}
                         style={styles.input}
@@ -71,14 +71,19 @@ const LoginScreen = () => {
                 </View>
 
                 <View style={styles.inputContainer}>
-                    <Text style={styles.label}>Password</Text>
+                    <Text style={styles.label}>Ijambo Banga</Text>
                     <TextInput
-                        placeholder="Enter password"
+                        placeholder="Injiza Ijambo Banga"
                         value={password}
                         onChangeText={setPassword}
                         style={styles.input}
                         secureTextEntry
                     />
+                </View>
+                <View>
+                <TouchableOpacity onPress={() => router.push("/auth/resetPassword")}>
+                    <Text style={styles.linkTextt}>Niba Wibagiwe Ijambo Banga Kanda Hano</Text>
+                </TouchableOpacity>
                 </View>
 
                 <TouchableOpacity
@@ -87,16 +92,17 @@ const LoginScreen = () => {
                     onPress={handleLogin}
                 >
                     <View>
+                    
                         {loading ? (
                             <ActivityIndicator size={30} color="#fff" />
                         ) : (
-                            <Text style={styles.buttonText}>Login</Text>
+                            <Text style={styles.buttonText}>Injira</Text>
                         )}
                     </View>
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={() => router.push("/auth/Register")}>
-                    <Text style={styles.linkText}>Don't have an account? Register</Text>
+                    <Text style={styles.linkText}>Muhinzi Niba Nta Konti Ufite Iyandikishe Hano</Text>
                 </TouchableOpacity>
             </View>
         </View>
@@ -152,6 +158,11 @@ const styles = StyleSheet.create({
     },
     linkText: {
         color: "#4CAF50",
+        textAlign: "center",
+        marginTop: 20,
+    },
+    linkTextt: {
+        color: "red",
         textAlign: "center",
         marginTop: 20,
     },
