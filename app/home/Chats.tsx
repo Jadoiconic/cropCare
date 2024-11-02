@@ -57,7 +57,7 @@ const FarmerChatScreen = () => {
   const requestMediaLibraryPermission = async () => {
     const { status } = await MediaLibrary.requestPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission required', 'Permission to access camera roll is required!');
+      Alert.alert('Uruhushya Rurakenewe', 'Kugirango mubashe kubona amafoto murasabwa kwemeza uruhushya!');
     }
   };
 
@@ -83,7 +83,7 @@ const FarmerChatScreen = () => {
 
   const handleExpertSelect = (expert: Expert) => {
     if (!user) {
-      Alert.alert('Not Authenticated', 'You need to log in to chat.');
+      Alert.alert('Ntabwo winjiye', 'Kugirango Ukoreshe Uruganiriro Urasabwa Kwinjira.');
       return;
     }
 
@@ -121,12 +121,12 @@ const FarmerChatScreen = () => {
 
   const sendMessage = async () => {
     if (!message && !image) {
-      Alert.alert('Empty Message', 'Please enter a message or select an image.');
+      Alert.alert('Ntabutumwa', 'Mwandike Ubutumwa Mushaka Kohereza.');
       return;
     }
 
     if (!chatId || !user) {
-      Alert.alert('No Chat Selected', 'Please select an expert to chat with.');
+      Alert.alert('Ntawokuganira Nawe Wahisemo', 'Muhitemo Umujyanama Muganira.');
       return;
     }
 
@@ -150,7 +150,7 @@ const FarmerChatScreen = () => {
       Keyboard.dismiss();
     } catch (error) {
       console.error('Error sending message:', error);
-      Alert.alert('Error', 'Failed to send message.');
+      Alert.alert('Kohereza Ubutumwa Byanze Ongera Ugerageze.');
     } finally {
       setSendingMessage(false);
     }
@@ -178,7 +178,7 @@ const FarmerChatScreen = () => {
         () => {},
         (error) => {
           console.error('Image upload failed:', error);
-          reject('Error uploading image. Please try again.');
+          reject('Kwinjiza Ifoto Byanze ongera Ugerageze.');
         },
         async () => {
           const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
@@ -237,7 +237,7 @@ const FarmerChatScreen = () => {
             <TextInput
               value={message}
               onChangeText={setMessage}
-              placeholder="Type your message"
+              placeholder="Andika Ubutumwa hano"
               style={styles.messageInput}
             />
             <TouchableOpacity onPress={handleImagePick} style={styles.imagePickerButton}>
@@ -267,7 +267,7 @@ const FarmerChatScreen = () => {
             renderItem={({ item }) => (
               <TouchableOpacity style={styles.expertCard} onPress={() => handleExpertSelect(item)}>
                 <Text style={styles.expertName}>{item.name}</Text>
-                <Text style={styles.expertiseText}>Expertise: {item.cropExpertise}</Text>
+                <Text style={styles.expertiseText}>Umujyanama: {item.cropExpertise}</Text>
               </TouchableOpacity>
             )}
             contentContainerStyle={styles.expertsList}

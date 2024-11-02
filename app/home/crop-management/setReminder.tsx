@@ -117,11 +117,11 @@ const Home: React.FC = () => {
                 return updatedReminders.sort((a, b) => b.time - a.time);
             });
 
-            Alert.alert('Success', 'Amamenyesha yashyizweho neza!');
+            Alert.alert('Byakunze', 'Amamenyesha yashyizweho neza!');
             clearInputs();
         } catch (error) {
             console.error('Error setting reminder:', error);
-            Alert.alert('Error', 'Gukora amamenyesha byananiranye.');
+            Alert.alert('Byanze', 'Gukora amamenyesha byananiranye.');
         }
     };
 

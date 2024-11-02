@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, Alert, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Button, Alert, ActivityIndicator, StyleSheet, Image } from 'react-native';
 import { Picker } from '@react-native-picker/picker'; // Correct Picker import
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -13,8 +13,9 @@ const RegisterExpertScreen = () => {
   const [loading, setLoading] = useState<boolean>(false);
 
   const handleRegister = async () => {
+    // Check for empty fields
     if (!name || !email || !password || !cropExpertise) {
-      Alert.alert('Error', 'Please fill in all fields, including crop expertise.');
+      Alert.alert('Ikosa', 'Nyamuneka uzuzemo imirongo yose, harimo n’ubuhanga mu buhinzi.');
       return;
     }
 
@@ -34,33 +35,34 @@ const RegisterExpertScreen = () => {
         createdAt: new Date(),
       });
 
-      setLoading(false);
-      Alert.alert('Success', 'Expert registered successfully.');
+      Alert.alert('Success', 'Umujyanama yanditswe neza.');
     } catch (error) {
+      Alert.alert('Ikosa mu kwiyandikisha', error.message);
+    } finally {
       setLoading(false);
-      Alert.alert('Registration Error', error.message);
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Register as an Expert</Text>
+      <Image source={require('@/assets/logo.jpg')} style={styles.logo} />
+      <Text style={styles.title}>Iyandikishe nk’Umujyanama</Text>
 
       <TextInput
-        placeholder="Name"
+        placeholder="Amazina"
         value={name}
         onChangeText={setName}
         style={styles.input}
       />
       <TextInput
-        placeholder="Email"
+        placeholder="Imeyili"
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
         style={styles.input}
       />
       <TextInput
-        placeholder="Password"
+        placeholder="Ijambo ry'ibanga"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
@@ -72,15 +74,15 @@ const RegisterExpertScreen = () => {
         style={styles.input}
         onValueChange={(itemValue) => setCropExpertise(itemValue)}
       >
-        <Picker.Item label="Select Crop Expertise" value="" />
-        <Picker.Item label="Umujyanama ku Buhinzi bw'Ibirayi (Potato Expert)" value="Umujyanama ku Buhinzi bw'Ibirayi" />
-        <Picker.Item label="Umujyanama ku Buhinzi bw'Ibigori (Maize Expert)" value="Umujyanama ku Buhinzi bw'Ibigori" />
+        <Picker.Item label="Hitamo Ubwoko Bwumujyanama mu buhinzi" value="" />
+        <Picker.Item label="Umujyanama ku Buhinzi bw'Ibirayi" value="Umujyanama ku Buhinzi bw'Ibirayi" />
+        <Picker.Item label="Umujyanama ku Buhinzi bw'Ibigori" value="Umujyanama ku Buhinzi bw'Ibigori" />
       </Picker>
 
       {loading ? (
         <ActivityIndicator size="large" color="#4CAF50" />
       ) : (
-        <Button title="Register" onPress={handleRegister} color="#4CAF50" />
+        <Button title="Iyandikishe" onPress={handleRegister} color="#4CAF50" />
       )}
     </View>
   );
@@ -91,6 +93,12 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     justifyContent: 'center',
+    alignItems: 'center', // Center items horizontally
+  },
+  logo: {
+    width: 100, // Adjust the width as needed
+    height: 100, // Adjust the height as needed
+    marginBottom: 20, // Space between logo and title
   },
   title: {
     fontSize: 24,
@@ -104,6 +112,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 10,
     marginVertical: 10,
+    width: '100%', // Make inputs take full width
   },
 });
 

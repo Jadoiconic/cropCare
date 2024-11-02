@@ -55,7 +55,7 @@ const LoginScreen = () => {
     return (
         <View style={styles.container}>
             <Image source={require("@/assets/logo.jpg")} style={styles.logo} />
-            <Text style={styles.welcomeText}>Welcome to CropCare</Text>
+            <Text style={styles.welcomeText}>Murakaza Neza Kuri Rwanda CropCare</Text>
             <Text style={styles.title}>Injira</Text>
             <View style={styles.form}>
                 <View style={styles.inputContainer}>
@@ -79,7 +79,7 @@ const LoginScreen = () => {
                     />
                 </View>
                 <TouchableOpacity onPress={() => router.push("/auth/resetPassword")}>
-                    <Text style={styles.linkText}>Niba Wibagiwe Ijambo Banga Kanda Hano</Text>
+                    <Text style={styles.linkTexts}>Niba Wibagiwe Ijambo Banga!, Kanda Hano</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -95,7 +95,7 @@ const LoginScreen = () => {
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={() => router.push("/auth/Register")}>
-                    <Text style={styles.linkText}>Muhinzi Niba Nta Konti Ufite Iyandikishe Hano</Text>
+                    <Text style={styles.linkText}>Muhinzi Niba Nta Konti Ufite, Iyandikishe Hano</Text>
                 </TouchableOpacity>
             </View>
         </View>
@@ -163,6 +163,11 @@ const styles = StyleSheet.create({
     },
     linkText: {
         color: "#4CAF50", // Primary green color for links
+        textAlign: "center",
+        marginTop: 20,
+    },
+    linkTexts: {
+        color: "blue", // Primary green color for links
         textAlign: "center",
         marginTop: 20,
     },

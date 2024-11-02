@@ -73,7 +73,7 @@ const Forum = () => {
         const requestCameraRollPermission = async () => {
             const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
             if (status !== 'granted') {
-                Alert.alert('Permission required', 'Permission to access camera roll is required!');
+                Alert.alert('Uruhushya Rurakenewe', 'Kugirango mubashe kubona amafoto murasabwa kwemeza uruhushya!');
             }
         };
 
@@ -135,11 +135,11 @@ const Forum = () => {
                     <View style={styles.inputContainer}>
                         <TextInput
                             style={styles.input}
-                            placeholder="Andika igitekerezo..."
+                            placeholder="Andika igitekerezo cg icyo ushaka gutangaza..."
                             value={newPostContent}
                             onChangeText={setNewPostContent}
                         />
-                        <Button title="Posta" onPress={handleCreatePost} />
+                        <Button title="Tangaza" onPress={handleCreatePost} />
                     </View>
                     <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
                         <Text style={styles.imagePickerText}>Hitamo ifoto</Text>
@@ -161,19 +161,19 @@ const Forum = () => {
                         <View style={styles.modalContainer}>
                             <Image source={{ uri: selectedImage }} style={styles.fullScreenImage} />
                             <TouchableOpacity onPress={closeImageModal} style={styles.closeButton}>
-                                <Text style={styles.closeButtonText}>Close</Text>
+                                <Text style={styles.closeButtonText}>Funga</Text>
                             </TouchableOpacity>
                         </View>
                     </Modal>
                 </>
             ) : (
                 <View style={styles.unauthContainer}>
-                    <Text style={styles.unauthText}>Please log in to access the Forum.</Text>
+                    <Text style={styles.unauthText}>Kugirango Mukoreshe Uruganiriro rusange Murasabwa Kwinjira.</Text>
                     <TouchableOpacity
                         style={styles.redirectButton}
                         onPress={() => router.push('/auth')}
                     >
-                        <Text style={styles.redirectButtonText}>Go to Login</Text>
+                        <Text style={styles.redirectButtonText}>Jya Aho Binjirira</Text>
                     </TouchableOpacity>
                 </View>
             )}
@@ -232,7 +232,7 @@ const Post = ({ post, onImagePress }) => {
                 <View style={styles.replyInputContainer}>
                     <TextInput
                         style={styles.input}
-                        placeholder="Andika igisubizo..."
+                        placeholder="Andika igisubizo cg icyo ubitekerezaho..."
                         value={newReplyText}
                         onChangeText={setNewReplyText}
                     />

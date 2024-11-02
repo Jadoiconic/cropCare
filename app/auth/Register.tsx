@@ -5,6 +5,7 @@ import {
     View,
     TouchableOpacity,
     ActivityIndicator,
+    Image,
 } from "react-native";
 import { TextInput } from "react-native-gesture-handler";
 import { createUserWithEmailAndPassword } from "firebase/auth";
@@ -23,6 +24,29 @@ const RegisterScreen = () => {
     const handleRegister = async () => {
         setLoading(true);
 
+        // Check for valid name
+        const nameRegex = /^(?=.*[a-zA-Z])[a-zA-Z0-9]+$/; // At least one letter, followed by letters or numbers
+        if (!newUserName || !nameRegex.test(newUserName)) {
+            alert("Izina rigomba kuba riri hagati y'inyuguti n'imibare. Ntibishobora kuba imibare gusa Cg ngo Hajyemo Ibimenyetso.");
+            setLoading(false);
+            return;
+        }
+
+        // Check for valid password length
+        if (password.length < 6) {
+            alert("Ijambo ry'ibanga rigomba kuba rifite nibura inyuguti 6.");
+            setLoading(false);
+            return;
+        }
+
+        // Check for valid email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email || !emailRegex.test(email)) {
+            alert("Email wanditse ntabwo ari mu buryo bwemewe. Nyamuneka ongera ugerageze.");
+            setLoading(false);
+            return;
+        }
+
         try {
             // Check if the username is unique
             const usernameQuery = query(
@@ -32,7 +56,20 @@ const RegisterScreen = () => {
             const usernameSnapshot = await getDocs(usernameQuery);
 
             if (!usernameSnapshot.empty) {
-                alert("Username already exists. Please choose a different username.");
+                alert("Izina ryo kwiyandikisha ryarafashwe. Hitamo irindi zina cyangwa wongere umubare wihariye inyuma y'izina.");
+                setLoading(false);
+                return;
+            }
+
+            // Check if the email is already in use
+            const emailQuery = query(
+                collection(db, "farmers"),
+                where("email", "==", email)
+            );
+            const emailSnapshot = await getDocs(emailQuery);
+
+            if (!emailSnapshot.empty) {
+                alert("Imeli yarafashwe. Nyamuneka ongera ugerageze n'indi Imeli.");
                 setLoading(false);
                 return;
             }
@@ -49,10 +86,10 @@ const RegisterScreen = () => {
                 createdAt: new Date().toISOString(),
             });
 
-            alert("Registration successful!");
+            alert("Kwiyandikisha byagenze neza!");
             router.push("/auth/"); // Adjust route as needed
         } catch (error) {
-            alert("Registration failed! " + error.message);
+            alert("Kwiyandikisha byanze! Reba ko wanditse imeli neza wongere ugerageze"); // Use Kinyarwanda for error message
         } finally {
             setLoading(false);
         }
@@ -60,12 +97,16 @@ const RegisterScreen = () => {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Register</Text>
+            <Image 
+                source={require('@/assets/logo.jpg')} // Update this path according to your project structure
+                style={styles.logo} 
+            />
+            <Text style={styles.title}>Kwiyandikisha</Text>
             <View style={styles.form}>
                 <View style={styles.inputContainer}>
-                    <Text style={styles.label}>Username</Text>
+                    <Text style={styles.label}>Izina ryo kwiyandikisha</Text>
                     <TextInput
-                        placeholder="Enter username"
+                        placeholder="Andika izina"
                         value={newUserName}
                         onChangeText={setNewUserName}
                         style={styles.input}
@@ -75,7 +116,7 @@ const RegisterScreen = () => {
                 <View style={styles.inputContainer}>
                     <Text style={styles.label}>Email</Text>
                     <TextInput
-                        placeholder="Enter email"
+                        placeholder="Andika Imeli"
                         autoCapitalize="none"
                         value={email}
                         onChangeText={setEmail}
@@ -84,9 +125,9 @@ const RegisterScreen = () => {
                 </View>
 
                 <View style={styles.inputContainer}>
-                    <Text style={styles.label}>Password</Text>
+                    <Text style={styles.label}>Ijambo ry'ibanga</Text>
                     <TextInput
-                        placeholder="Enter password"
+                        placeholder="Andika ijambo ry'ibanga"
                         value={password}
                         onChangeText={setPassword}
                         style={styles.input}
@@ -103,13 +144,13 @@ const RegisterScreen = () => {
                         {loading ? (
                             <ActivityIndicator size={30} color="#fff" />
                         ) : (
-                            <Text style={styles.buttonText}>Register</Text>
+                            <Text style={styles.buttonText}>Kwiyandikisha</Text>
                         )}
                     </View>
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={() => router.push("/auth/")}>
-                    <Text style={styles.linkText}>Already have an account? Sign in</Text>
+                    <Text style={styles.linkTexts}>Ufite konti? Injira Hano</Text>
                 </TouchableOpacity>
             </View>
         </View>
@@ -124,6 +165,11 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         height: "100%",
         padding: 20,
+    },
+    logo: {
+        width: 100, // Adjust the width according to your logo size
+        height: 100, // Adjust the height according to your logo size
+        marginBottom: 20, // Space between logo and title
     },
     form: {
         width: "100%",
@@ -165,6 +211,11 @@ const styles = StyleSheet.create({
     },
     linkText: {
         color: "#4CAF50",
+        textAlign: "center",
+        marginTop: 20,
+    },
+    linkTexts: {
+        color: "blue",
         textAlign: "center",
         marginTop: 20,
     },

@@ -12,6 +12,7 @@ import {
 import { auth, db } from "@/services/config"; // Ensure this path is correct based on your project structure
 import { sendPasswordResetEmail } from "firebase/auth";
 import { collection, getDocs, query, where } from "firebase/firestore";
+import { router } from "expo-router";
 
 export default function ResetPasswordScreen() {
   const [email, setEmail] = useState("");
@@ -44,13 +45,13 @@ export default function ResetPasswordScreen() {
       // Send the reset password email if the email exists
       await sendPasswordResetEmail(auth, email.trim());
       Alert.alert(
-        "Ubwoherejwe",
-        "Email yo gushyiraho ijambo banga rishya yoherejwe! Reba imeri yawe."
+        "Yoherejwe",
+        "Imeli yo gushyiraho ijambo banga rishya yoherejwe! Reba imeri yawe."
       );
       setEmail(""); // Clear the input field
     } catch (error) {
-      console.error("Ikibazo mu kohereza email yo gushyiraho ijambo banga rishya: ", error);
-      Alert.alert("Ikosa", error.message || "Kohereza email yo gushyiraho ijambo banga rishya byanze. Ongera ugerageze.");
+      console.error("Ikibazo mu kohereza email yo gushyiraho ijambo banga rishya: ");
+      Alert.alert("Ikosa ,Kohereza email yo gushyiraho ijambo banga rishya byanze. Ongera ugerageze.");
     } finally {
       setLoading(false);
     }
@@ -63,7 +64,7 @@ export default function ResetPasswordScreen() {
 
       <TextInput
         style={styles.input}
-        placeholder="Injiza aderesi y'imeri yawe"
+        placeholder="Injiza Imeli Wakoresheje wiyandikisha"
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
@@ -78,8 +79,11 @@ export default function ResetPasswordScreen() {
         {loading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.buttonText}>Ohereza Email yo Guhindura</Text>
+          <Text style={styles.buttonText}>Ohereza Imeli yo Guhindura</Text>
         )}
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => router.push("/auth/")}>
+                    <Text style={styles.linkTexts}>Niba wibuka Ijambobanga? Injira Hano</Text>
       </TouchableOpacity>
     </View>
   );
@@ -134,4 +138,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
+  linkTexts: {
+    color: "blue",
+    textAlign: "center",
+    marginTop: 20,
+},
 });

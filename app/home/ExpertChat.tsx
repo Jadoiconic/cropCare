@@ -53,7 +53,7 @@ const ExpertChatScreen = () => {
   const requestCameraRollPermission = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
-      Alert.alert('Permission required', 'Permission to access camera roll is required!');
+      Alert.alert('Uruhushya Rurakenewe', 'Kugirango Mubashe Kubona amafoto Mwemeze Uruhushya!');
     }
   };
 
@@ -75,7 +75,7 @@ const ExpertChatScreen = () => {
 
   const handleFarmerSelect = (farmer: Farmer) => {
     if (!user) {
-      Alert.alert('Not Authenticated', 'You need to log in to chat.');
+      Alert.alert('Ntabwo Winjyiye', 'kugirango ukoreshe Uruganiriro Urabanza winjire.');
       return;
     }
 
@@ -113,7 +113,7 @@ const ExpertChatScreen = () => {
     }
 
     if (!chatId || !user) {
-      Alert.alert('No Chat Selected', 'Please select a farmer to chat with.');
+      Alert.alert('Ntawo kuganira nawe mwahisemo', 'Hitamo Uwo muganira.');
       return;
     }
 
@@ -211,9 +211,9 @@ const ExpertChatScreen = () => {
       {showChat ? (
         <View style={styles.chatContainer}>
           <TouchableOpacity onPress={() => setShowChat(false)} style={styles.backButton}>
-            <Text style={styles.backButtonText}>Back</Text>
+            <Text style={styles.backButtonText}>Subira Inyuma</Text>
           </TouchableOpacity>
-          <Text style={styles.header}>Chat with {selectedFarmer?.name}</Text>
+          <Text style={styles.header}>Ganira Na {selectedFarmer?.name}</Text>
           {renderMessagesList()}
           {loadingMessages && <ActivityIndicator size="large" color="#0000ff" />}
           <View style={styles.inputContainer}>
