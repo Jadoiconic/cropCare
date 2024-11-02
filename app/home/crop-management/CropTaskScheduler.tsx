@@ -12,6 +12,7 @@ const addDays = (date: Date, days: number): Date => {
   return result;
 };
 
+// Define types for task and schedule data
 interface Task {
   date: Date;
   task: string;
@@ -25,16 +26,18 @@ interface ScheduleData {
 }
 
 const ScheduleCrop = () => {
-  const [crop, setCrop] = useState<string>('');
-  const [plantingDate, setPlantingDate] = useState<Date>(new Date());
-  const [farmName, setFarmName] = useState<string>('');
-  const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
-  const [schedules, setSchedules] = useState<ScheduleData[]>([]);
+  const [crop, setCrop] = useState<string>(''); // Selected crop type
+  const [plantingDate, setPlantingDate] = useState<Date>(new Date()); // Planting date
+  const [farmName, setFarmName] = useState<string>(''); // Farm name
+  const [showDatePicker, setShowDatePicker] = useState<boolean>(false); // State to show/hide date picker
+  const [schedules, setSchedules] = useState<ScheduleData[]>([]); // List of schedules
 
+  // Load saved schedules on component mount
   useEffect(() => {
     loadSchedules();
   }, []);
 
+  // Function to load schedules from AsyncStorage
   const loadSchedules = async () => {
     try {
       const jsonValue = await AsyncStorage.getItem('schedules');
@@ -55,6 +58,7 @@ const ScheduleCrop = () => {
     }
   };
 
+  // Generate schedule tasks based on selected crop type and planting date
   const generateSchedule = (cropType: string, startDate: Date): Task[] => {
     if (cropType === 'Ibirayi') {
       return [
@@ -78,14 +82,17 @@ const ScheduleCrop = () => {
     return [];
   };
 
+  // Handle form submission for creating a new schedule
   const handleSubmit = async () => {
     if (!crop || !plantingDate || !farmName) {
       Alert.alert('Ikosa', 'Nyamuneka wujuje ibisabwa byose.');
       return;
     }
 
+    // Generate tasks based on selected crop type and planting date
     const newSchedule = generateSchedule(crop, plantingDate);
 
+    // Create a new schedule object
     const newScheduleData: ScheduleData = {
       crop,
       plantingDate: plantingDate.toISOString(),
@@ -97,27 +104,41 @@ const ScheduleCrop = () => {
     };
 
     try {
+      // Update the schedules array and save it to AsyncStorage
       const updatedSchedules = [...schedules, newScheduleData];
       await AsyncStorage.setItem('schedules', JSON.stringify(updatedSchedules));
 
+      // Schedule notifications for each task in the new schedule
       newSchedule.forEach((task) => {
         scheduleNotification(task.task, task.date);
       });
 
       Alert.alert('Impuruza Zahinduwe', 'Uzabona impuruza ku kazi kose!');
-      setSchedules(updatedSchedules);
+      setSchedules(updatedSchedules); // Update the schedules state
     } catch (error) {
       console.error('Error saving schedule:', error);
     }
   };
 
+  // Function to schedule notifications for tasks at exact time and one day before
   const scheduleNotification = async (task: string, date: Date) => {
+    // Schedule notification at the exact time of the task
     await Notifications.scheduleNotificationAsync({
       content: { title: 'Kazi mu bijyanye n’ubuhinzi', body: task },
       trigger: { date },
     });
+
+    // Schedule notification one day before the task date
+    const oneDayBefore = new Date(date);
+    oneDayBefore.setDate(date.getDate() - 1); // Set to one day before
+
+    await Notifications.scheduleNotificationAsync({
+      content: { title: 'Ikibutsa ku kazi k\'ejo', body: `Ejo uzakora: ${task}` },
+      trigger: { date: oneDayBefore },
+    });
   };
 
+  // Function to delete a schedule
   const deleteSchedule = async (index: number) => {
     const updatedSchedules = schedules.filter((_, i) => i !== index);
     await AsyncStorage.setItem('schedules', JSON.stringify(updatedSchedules));
@@ -125,6 +146,7 @@ const ScheduleCrop = () => {
     Alert.alert('Impuruza Ihinduwe', 'Gahunda Yasibwe.');
   };
 
+  // Function to handle date change from DateTimePicker
   const onDateChange = (event: any, selectedDate?: Date) => {
     setShowDatePicker(Platform.OS === 'ios');
     if (selectedDate) {
@@ -132,12 +154,15 @@ const ScheduleCrop = () => {
     }
   };
 
+  // Format the date to Kinyarwanda locale
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('rw-RW', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.title}>Gahunda y'Ubuhinzi</Text>
+
       <Text style={styles.label}>Hitamo Igihingwa</Text>
       <Picker selectedValue={crop} onValueChange={(value) => setCrop(value)} style={styles.picker}>
         <Picker.Item label="Hitamo Igihingwa" value="" />
@@ -173,10 +198,10 @@ const ScheduleCrop = () => {
               <Text style={styles.scheduleCrop}>{schedule.crop} - {schedule.farmName}</Text>
               <Text style={styles.scheduleDate}>Itariki yo Gutera: {formatDate(new Date(schedule.plantingDate))}</Text>
               {schedule.tasks.map((task, taskIndex) => (
-                <Text key={taskIndex} style={styles.taskDetail}>{`${formatDate(new Date(task.date))}: ${task.task}`}</Text>
+                <Text key={taskIndex} style={styles.task}>{formatDate(new Date(task.date))}: {task.task}</Text>
               ))}
               <TouchableOpacity style={styles.deleteButton} onPress={() => deleteSchedule(index)}>
-                <Text style={styles.deleteButtonText}>Kuraho Gahunda</Text>
+                <Text style={styles.deleteButtonText}>Siba Gahunda</Text>
               </TouchableOpacity>
             </View>
           ))}
@@ -186,88 +211,25 @@ const ScheduleCrop = () => {
   );
 };
 
+// Define component styles
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    padding: 20,
-    backgroundColor: '#f9fafb',
-  },
-  label: {
-    fontSize: 18,
-    marginBottom: 5,
-    color: '#374151',
-    fontWeight: '500',
-  },
-  picker: {
-    height: 50,
-    marginBottom: 20,
-  },
-  dateButton: {
-    padding: 15,
-    backgroundColor: '#d1fae5',
-    borderRadius: 5,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  dateButtonText: {
-    color: '#065f46',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 20,
-    backgroundColor: '#ffffff',
-  },
-  submitButton: {
-    backgroundColor: '#10b981',
-    padding: 15,
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  submitButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-  },
-  scheduleContainer: {
-    marginTop: 20,
-  },
-  scheduleHeader: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#065f46',
-    marginBottom: 10,
-  },
-  schedule: {
-    backgroundColor: '#ecfdf5',
-    padding: 15,
-    borderRadius: 5,
-    marginBottom: 10,
-  },
-  scheduleCrop: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#065f46',
-  },
-  scheduleDate: {
-    fontSize: 16,
-    color: '#065f46',
-  },
-  taskDetail: {
-    fontSize: 14,
-    color: '#065f46',
-  },
-  deleteButton: {
-    marginTop: 10,
-    padding: 10,
-    backgroundColor: '#f87171',
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  deleteButtonText: {
-    color: '#ffffff',
-  },
+  container: { flexGrow: 1, padding: 20, backgroundColor: '#fff' },
+  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20 },
+  label: { fontSize: 16, marginBottom: 8 },
+  picker: { height: 50, width: '100%', marginBottom: 20 },
+  dateButton: { padding: 12, backgroundColor: '#eee', alignItems: 'center', marginBottom: 20 },
+  dateButtonText: { fontSize: 16 },
+  input: { borderWidth: 1, borderColor: '#ddd', padding: 10, marginBottom: 20 },
+  submitButton: { backgroundColor: '#28a745', padding: 12, alignItems: 'center', marginBottom: 20 },
+  submitButtonText: { color: '#fff', fontSize: 16 },
+  scheduleContainer: { marginTop: 20 },
+  scheduleHeader: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
+  schedule: { padding: 15, borderWidth: 1, borderColor: '#ddd', marginBottom: 10 },
+  scheduleCrop: { fontSize: 18, fontWeight: 'bold' },
+  scheduleDate: { fontSize: 14, color: '#666' },
+  task: { fontSize: 14, color: '#333', fontWeight: 'bold' }, // Bolded task date
+  deleteButton: { marginTop: 10, alignItems: 'center', backgroundColor: '#dc3545', padding: 8 },
+  deleteButtonText: { color: '#fff', fontSize: 14 },
 });
 
 export default ScheduleCrop;

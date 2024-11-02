@@ -4,173 +4,83 @@ import {
     View,
     TouchableOpacity,
     ActivityIndicator,
-    FlatList,
     ScrollView,
+    Image,
 } from "react-native";
-import { TextInput } from "react-native-gesture-handler";
+import { TextInput } from "react-native";
 import { useEffect, useState } from "react";
-import { auth, db } from "@/services/config"; 
-import { doc, getDoc, setDoc, collection, query, getDocs } from "firebase/firestore"; 
-import { useRouter } from "expo-router"; 
-import { createUserWithEmailAndPassword } from "firebase/auth"; 
+import { auth, db } from "@/services/config";
+import { doc, getDoc } from "firebase/firestore";
+import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import React from "react";
 
 const UserManagementScreen = () => {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [userDetails, setUserDetails] = useState<any>(null);
-    const [users, setUsers] = useState<any[]>([]);
-    const [newUserEmail, setNewUserEmail] = useState("");
     const [newUserPassword, setNewUserPassword] = useState("");
-    const [newUserName, setNewUserName] = useState(""); 
-    const [role] = useState("Expert"); 
 
     useEffect(() => {
+        const loadUserData = async () => {
+            const user = auth.currentUser;
+
+            if (user) {
+                try {
+                    const storedUserData = await AsyncStorage.getItem("userDetails");
+                    if (storedUserData) {
+                        setUserDetails(JSON.parse(storedUserData));
+                        setLoading(false);
+                    } else {
+                        await fetchUserData();
+                    }
+                } catch (error) {
+                    console.error("Failed to parse stored user data:", error);
+                    await fetchUserData();
+                }
+            } else {
+                alert("Nyamuneka winjire kugirango ugerweho iyi paji.");
+                router.replace('/auth');
+            }
+        };
+
         const fetchUserData = async () => {
             const user = auth.currentUser;
             if (user) {
                 const docRef = doc(db, "farmers", user.uid);
                 const docSnap = await getDoc(docRef);
+
                 if (docSnap.exists()) {
-                    setUserDetails({ id: user.uid, ...docSnap.data() });
-                    if (docSnap.data().role === "Admin") {
-                        fetchAllUsers();
-                    }
+                    const data = { id: user.uid, ...docSnap.data() };
+                    setUserDetails(data);
+                    await AsyncStorage.setItem("userDetails", JSON.stringify(data));
                 }
-            } else {
-                alert("Please log in to access this page.");
-                router.replace('/auth'); // Redirect to auth if not logged in
             }
             setLoading(false);
         };
 
-        fetchUserData();
+        loadUserData();
     }, []);
-
-    const fetchAllUsers = async () => {
-        try {
-            const usersCollection = collection(db, "farmers");
-            const q = query(usersCollection);
-            const querySnapshot = await getDocs(q);
-            const usersList: any[] = [];
-            querySnapshot.forEach((doc) => {
-                usersList.push({ id: doc.id, ...doc.data() });
-            });
-            setUsers(usersList);
-        } catch (error) {
-            console.error("Error fetching users:", error);
-        }
-    };
-
-    const handleUpdatePassword = async (newPassword: string) => {
-        const user = auth.currentUser;
-        if (user) {
-            try {
-                await user.updatePassword(newPassword);
-                alert("Password updated successfully!");
-            } catch (error) {
-                alert("Password update failed! " + error.message);
-            }
-        }
-    };
-
-    const handleRegisterUser = async () => {
-        if (newUserEmail && newUserPassword && newUserName) {
-            try {
-                const userCredential = await createUserWithEmailAndPassword(auth, newUserEmail, newUserPassword);
-                const user = userCredential.user;
-
-                await setDoc(doc(db, "farmers", user.uid), {
-                    name: newUserName, 
-                    email: user.email,
-                    role: role,
-                    createdAt: new Date().toISOString(),
-                });
-
-                alert("User registered successfully!");
-                // Reset form fields
-                setNewUserEmail("");
-                setNewUserPassword("");
-                setNewUserName("");
-            } catch (error) {
-                alert("Registration failed! " + error.message);
-            }
-        } else {
-            alert("Please fill all fields!");
-        }
-    };
 
     return (
         <ScrollView style={styles.container}>
             {loading ? (
-                <ActivityIndicator size="large" color="#0000ff" />
+                <ActivityIndicator size="large" color="#008000" />
             ) : (
-                <View style={{ width: "100%", padding: 20 }}>
+                <View style={styles.content}>
+                    <View style={styles.logoContainer}>
+                        <Image
+                            source={require("@/assets/logo.jpg")} // Ensure logo.png is in the correct path
+                            style={styles.logo}
+                        />
+                    </View>
                     {userDetails && (
                         <View style={styles.userInfo}>
-                            <Text style={styles.title}>Your Details</Text>
-                            <Text style={styles.label}>Name: {userDetails.name}</Text>
-                            <Text style={styles.label}>Email: {userDetails.email}</Text>
-                            <Text style={styles.label}>Role: {userDetails.role}</Text>
-
-                            <TextInput
-                                placeholder="New Password"
-                                onChangeText={setNewUserPassword}
-                                style={styles.input}
-                                secureTextEntry
-                            />
-                            <TouchableOpacity
-                                style={styles.button}
-                                onPress={() => handleUpdatePassword(newUserPassword)}
-                            >
-                                <Text style={styles.buttonText}>Update Password</Text>
-                            </TouchableOpacity>
+                            <Text style={styles.title}>Amakuru yawe</Text>
+                            <Text style={styles.label}>Izina: {userDetails.name}</Text>
+                            <Text style={styles.label}>Imeli: {userDetails.email}</Text>
+                            <Text style={styles.label}>Umwanya: {userDetails.role}</Text>
                         </View>
-                    )}
-
-                    {userDetails.role === "Admin" && (
-                        <View style={styles.registerContainer}>
-                            <Text style={styles.title}>Register New User</Text>
-                            <TextInput
-                                placeholder="User Name"
-                                value={newUserName}
-                                onChangeText={setNewUserName}
-                                style={styles.input}
-                            />
-                            <TextInput
-                                placeholder="User Email"
-                                value={newUserEmail}
-                                onChangeText={setNewUserEmail}
-                                style={styles.input}
-                            />
-                            <TextInput
-                                placeholder="User Password"
-                                value={newUserPassword}
-                                onChangeText={setNewUserPassword}
-                                style={styles.input}
-                                secureTextEntry
-                            />
-                            <TouchableOpacity
-                                style={styles.button}
-                                onPress={handleRegisterUser}
-                            >
-                                <Text style={styles.buttonText}>Register User</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    <Text style={styles.title}>User List</Text>
-                    {users.length > 0 ? (
-                        <FlatList
-                            data={users}
-                            renderItem={({ item }) => (
-                                <View style={styles.userItem}>
-                                    <Text>{item.name} - {item.email} - {item.role}</Text>
-                                </View>
-                            )}
-                            keyExtractor={(item) => item.id}
-                        />
-                    ) : (
-                        <Text>No users found.</Text>
                     )}
                 </View>
             )}
@@ -181,60 +91,70 @@ const UserManagementScreen = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#fff",
+        backgroundColor: "#F3F4F6",
+    },
+    content: {
+        width: "100%",
         padding: 20,
     },
+    logoContainer: {
+        alignItems: "center",
+        marginBottom: 20,
+    },
+    logo: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        borderWidth: 2,
+        borderColor: "#008000",
+    },
     title: {
-        fontSize: 24,
-        fontWeight: "bold",
+        fontSize: 26,
+        fontWeight: "700",
+        color: "#008000",
         marginBottom: 10,
+        textAlign: "center",
     },
     label: {
         fontSize: 18,
+        color: "#333",
+        marginBottom: 8,
+        lineHeight: 24,
+    },
+    userInfo: {
+        backgroundColor: "#fff",
+        padding: 20,
+        borderRadius: 10,
+        borderColor: "#D1D5DB",
+        borderWidth: 1,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        marginBottom: 20,
     },
     input: {
         width: "100%",
         height: 50,
         borderWidth: 1,
-        borderColor: "gray",
-        borderRadius: 5,
-        paddingHorizontal: 20,
-        fontSize: 18,
-        marginBottom: 10,
+        borderColor: "#D1D5DB",
+        borderRadius: 10,
+        paddingHorizontal: 16,
+        fontSize: 16,
+        backgroundColor: "#fff",
+        marginBottom: 16,
     },
     button: {
-        backgroundColor: "#6C63FF",
+        backgroundColor: "#008000",
         paddingVertical: 15,
-        paddingHorizontal: 30,
-        borderRadius: 5,
+        borderRadius: 10,
         alignItems: "center",
-        marginBottom: 20,
+        marginTop: 20,
     },
     buttonText: {
         color: "#fff",
-        fontWeight: "bold",
+        fontWeight: "600",
         fontSize: 18,
-    },
-    userInfo: {
-        marginBottom: 20,
-        padding: 10,
-        borderWidth: 1,
-        borderColor: "lightgray",
-        borderRadius: 5,
-        width: "100%",
-    },
-    registerContainer: {
-        marginBottom: 20,
-        padding: 10,
-        borderWidth: 1,
-        borderColor: "lightgray",
-        borderRadius: 5,
-        width: "100%",
-    },
-    userItem: {
-        padding: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: "lightgray",
     },
 });
 

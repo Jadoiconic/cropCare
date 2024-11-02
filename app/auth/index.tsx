@@ -5,6 +5,7 @@ import {
     View,
     TouchableOpacity,
     ActivityIndicator,
+    Image,
 } from "react-native";
 import { TextInput } from "react-native-gesture-handler";
 import { signInWithEmailAndPassword } from "firebase/auth";
@@ -23,34 +24,29 @@ const LoginScreen = () => {
         setLoading(true);
 
         try {
-            // Query the Firestore to find user with the provided username
             const userQuery = query(
                 collection(db, "farmers"),
                 where("name", "==", username)
             );
             const querySnapshot = await getDocs(userQuery);
 
-            // Check if the username exists
             if (querySnapshot.empty) {
                 alert("Izina Winjije Ntabwo Ribashije Kuboneka Reba Ko Waryanditse neza Wongere Ugerageze");
                 setLoading(false);
                 return;
             }
 
-            // Retrieve the email from the document
             const userData = querySnapshot.docs[0].data();
             const userEmail = userData.email;
 
-            // Authenticate with Firebase Auth using the email and password
             await signInWithEmailAndPassword(auth, userEmail, password);
 
-            // Store user data in AsyncStorage
             await AsyncStorage.setItem("user", JSON.stringify(userData));
 
             alert("Kwinjira Byagenze Neza!");
             router.push("/home"); // Adjust route as needed
         } catch (error) {
-            alert("Kwinjira Byanze! " + error.message);
+            alert("Kwinjira Byanze!, Reba Ko Wanditse Neza Izina cg Ijambo Banga Wongere Ugerageze");
         } finally {
             setLoading(false);
         }
@@ -58,6 +54,8 @@ const LoginScreen = () => {
 
     return (
         <View style={styles.container}>
+            <Image source={require("@/assets/logo.jpg")} style={styles.logo} />
+            <Text style={styles.welcomeText}>Welcome to CropCare</Text>
             <Text style={styles.title}>Injira</Text>
             <View style={styles.form}>
                 <View style={styles.inputContainer}>
@@ -80,25 +78,20 @@ const LoginScreen = () => {
                         secureTextEntry
                     />
                 </View>
-                <View>
                 <TouchableOpacity onPress={() => router.push("/auth/resetPassword")}>
-                    <Text style={styles.linkTextt}>Niba Wibagiwe Ijambo Banga Kanda Hano</Text>
+                    <Text style={styles.linkText}>Niba Wibagiwe Ijambo Banga Kanda Hano</Text>
                 </TouchableOpacity>
-                </View>
 
                 <TouchableOpacity
                     style={[styles.button, { backgroundColor: loading ? "gray" : "#4CAF50" }]}
                     disabled={loading}
                     onPress={handleLogin}
                 >
-                    <View>
-                    
-                        {loading ? (
-                            <ActivityIndicator size={30} color="#fff" />
-                        ) : (
-                            <Text style={styles.buttonText}>Injira</Text>
-                        )}
-                    </View>
+                    {loading ? (
+                        <ActivityIndicator size={30} color="#fff" />
+                    ) : (
+                        <Text style={styles.buttonText}>Injira</Text>
+                    )}
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={() => router.push("/auth/Register")}>
@@ -111,16 +104,41 @@ const LoginScreen = () => {
 
 const styles = StyleSheet.create({
     container: {
-        marginTop: 20,
         backgroundColor: "#fff",
         alignItems: "center",
         justifyContent: "center",
         height: "100%",
         padding: 20,
     },
+    logo: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        marginBottom: 10,
+    },
+    welcomeText: {
+        fontSize: 24,
+        color: "#4CAF50", // Primary green color
+        fontWeight: "bold",
+        marginBottom: 10,
+    },
     form: {
         width: "100%",
         padding: 20,
+    },
+    title: {
+        fontSize: 24,
+        fontWeight: "bold",
+        color: "#4CAF50", // Primary green color
+        marginBottom: 20,
+    },
+    inputContainer: {
+        marginBottom: 15,
+    },
+    label: {
+        fontSize: 18,
+        fontWeight: "bold",
+        marginBottom: 5,
     },
     input: {
         width: "100%",
@@ -130,19 +148,6 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         paddingHorizontal: 20,
         fontSize: 18,
-    },
-    label: {
-        fontSize: 18,
-        fontWeight: "bold",
-        marginBottom: 5,
-    },
-    inputContainer: {
-        marginBottom: 15,
-    },
-    title: {
-        fontSize: 30,
-        fontWeight: "bold",
-        marginBottom: 20,
     },
     button: {
         paddingVertical: 15,
@@ -157,12 +162,7 @@ const styles = StyleSheet.create({
         textAlign: "center",
     },
     linkText: {
-        color: "#4CAF50",
-        textAlign: "center",
-        marginTop: 20,
-    },
-    linkTextt: {
-        color: "red",
+        color: "#4CAF50", // Primary green color for links
         textAlign: "center",
         marginTop: 20,
     },

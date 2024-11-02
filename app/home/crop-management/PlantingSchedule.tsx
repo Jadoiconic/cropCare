@@ -31,7 +31,7 @@ const FarmingGuideScreen = () => {
           </Text>
           <Text style={styles.subSectionTitle}>1. Igihembwe A (Nzeli - Mutarama)</Text>
           <Text style={styles.content}>
-            Igihembwe A ritangira mu kwezi kwa Nzeli rigasozwa muri Mutarama. Ni igihe cy’imvura nkeya, gikwiranye n’imyaka nk’ibigori n’ibirayi. Gutera bikorwa hagati muri Nzeli no mu ntangiriro z’Ukwakira.
+            Igihembwe A ritangira mu kwezi kwa Nzeli rigasozwa muri Mutarama. Ni igihe cy’imvura nkeya, gikwiranye n’imyaka nk'ibgori n'ibirayi. Gutera bikorwa hagati muri Nzeli no mu ntangiriro z’Ukwakira.
           </Text>
           <Text style={styles.subSectionTitle}>2. Igihembwe B (Gashyantare - Kamena)</Text>
           <Text style={styles.content}>
@@ -138,18 +138,26 @@ const FarmingGuideScreen = () => {
               <View key={index} style={styles.tableRow}>
                 <Text style={styles.tableRowText}>{item.task}</Text>
                 <Text style={styles.tableRowText}>{item.date}</Text>
-                <Text style={styles.tableRowText}>{schedules.potatoes[index].date}</Text>
+                <Text style={styles.tableRowText}>{schedules.potatoes[index]?.date}</Text>
               </View>
             ))}
           </View>
         </View>
       </ScrollView>
 
-      {/* Add Padding at the Bottom to Prevent Overlap */}
-      <View style={styles.bottomSpacing} />
+      {/* Schedule Crop Button */}
+      <TouchableOpacity
+        style={styles.scheduleButton}
+        onPress={() => router.push('/home/crop-management/CropTaskScheduler')}
+      >
+        <Text style={styles.scheduleButtonText}>Gena Igenamigambi</Text>
+      </TouchableOpacity>
 
-      {/* Button */}
-      <TouchableOpacity style={styles.reminderButton} onPress={() => router.push('/home/crop-management/setReminder')}>
+      {/* Set Reminder Button */}
+      <TouchableOpacity
+        style={styles.reminderButton}
+        onPress={() => router.push('/home/crop-management/setReminder')}
+      >
         <Text style={styles.reminderButtonText}>Shyiraho Urwibutso</Text>
       </TouchableOpacity>
     </View>
@@ -159,94 +167,90 @@ const FarmingGuideScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#fff',
+    position: 'relative', // Position relative for absolute children
   },
   scrollView: {
     padding: 16,
-    paddingBottom: 100, // Added bottom padding to avoid button overlap
+    paddingBottom: 140, // Add bottom padding to avoid content being hidden under buttons
   },
   section: {
-    marginBottom: 24,
-    backgroundColor: '#ffffff',
-    borderRadius: 8,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#228B22', // Dark Green for Section Titles
     marginBottom: 8,
   },
   subSectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#32CD32', // Bright Green for Subsection Titles
-    marginTop: 12,
-    marginBottom: 4,
+    marginVertical: 4,
   },
   content: {
     fontSize: 14,
-    color: '#333333',
-    marginBottom: 8,
-    lineHeight: 20,
+    marginBottom: 4,
   },
   bold: {
     fontWeight: 'bold',
-    color: '#228B22', // Dark Green for Emphasis
   },
   table: {
-    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    marginTop: 10,
+    borderRadius: 4,
+    overflow: 'hidden',
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#228B22',
+    backgroundColor: '#f0f0f0',
     padding: 8,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
   },
   tableHeaderText: {
     flex: 1,
-    fontSize: 14,
     fontWeight: 'bold',
-    color: '#ffffff',
     textAlign: 'center',
   },
   tableRow: {
     flexDirection: 'row',
-    backgroundColor: '#f0f0f0',
-    padding: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#ccc',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
   },
   tableRowText: {
     flex: 1,
-    fontSize: 14,
     textAlign: 'center',
-    color: '#333333',
   },
-  bottomSpacing: {
-    height: 100, // Space at the bottom to avoid button overlap
+  scheduleButton: {
+    position: 'absolute', // Fix position
+    bottom: 80, // Distance from the bottom
+    left: 16,
+    right: 16,
+    backgroundColor: '#4CAF50', // Change to your preferred color
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  scheduleButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   reminderButton: {
-    backgroundColor: '#228B22',
-    borderRadius: 50,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    position: 'absolute',
-    bottom: 20,
-    left: '25%',
-    right: '25%',
+    position: 'absolute', // Fix position
+    bottom: 20, // Distance from the bottom
+    left: 16,
+    right: 16,
+    backgroundColor: '#4CAF50', // Change to your preferred color
+    padding: 12,
+    borderRadius: 8,
     alignItems: 'center',
   },
   reminderButtonText: {
+    color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#ffffff',
   },
 });
 
