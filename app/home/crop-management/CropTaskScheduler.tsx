@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, Alert, StyleSheet, TouchableOpacity, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, Alert, StyleSheet, TouchableOpacity, Platform, ScrollView } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -56,23 +56,23 @@ const ScheduleCrop = () => {
   };
 
   const generateSchedule = (cropType: string, startDate: Date): Task[] => {
-    if (cropType === 'potato') {
+    if (cropType === 'Ibirayi') {
       return [
-        { date: addDays(startDate, 0), task: 'Plant seed potatoes' },
-        { date: addDays(startDate, 14), task: 'First weeding and pest control' },
-        { date: addDays(startDate, 30), task: 'Apply nitrogen fertilizer' },
-        { date: addDays(startDate, 60), task: 'Second weeding and pest control' },
-        { date: addDays(startDate, 90), task: 'Monitor for pests and diseases' },
-        { date: addDays(startDate, 120), task: 'Harvest potatoes' },
+        { date: addDays(startDate, 0), task: 'Gutera Ibirayi' },
+        { date: addDays(startDate, 14), task: 'Gukuraho ibyatsi no kurwanya udukoko' },
+        { date: addDays(startDate, 30), task: 'Gushyiraho ifumbire ya azote' },
+        { date: addDays(startDate, 60), task: 'Gukuraho ibyatsi no kurwanya udukoko bwa kabiri' },
+        { date: addDays(startDate, 90), task: 'Kugenzura indwara n’udukoko' },
+        { date: addDays(startDate, 120), task: 'Kwimbura Ibirayi' },
       ];
-    } else if (cropType === 'maize') {
+    } else if (cropType === 'Ibigori') {
       return [
-        { date: addDays(startDate, 0), task: 'Sow maize seeds' },
-        { date: addDays(startDate, 15), task: 'First weeding and pest control' },
-        { date: addDays(startDate, 30), task: 'Apply nitrogen fertilizer' },
-        { date: addDays(startDate, 60), task: 'Second weeding and pest control' },
-        { date: addDays(startDate, 90), task: 'Foliar feeding and disease check' },
-        { date: addDays(startDate, 120), task: 'Harvest maize' },
+        { date: addDays(startDate, 0), task: 'Gutera ibigori' },
+        { date: addDays(startDate, 15), task: 'Gukuraho ibyatsi no kurwanya udukoko' },
+        { date: addDays(startDate, 30), task: 'Gushyiraho ifumbire ya azote' },
+        { date: addDays(startDate, 60), task: 'Gukuraho ibyatsi no kurwanya udukoko bwa kabiri' },
+        { date: addDays(startDate, 90), task: 'Kongerera ibigori ibiribwa no kugenzura indwara' },
+        { date: addDays(startDate, 120), task: 'Kwimbura ibigori' },
       ];
     }
     return [];
@@ -80,7 +80,7 @@ const ScheduleCrop = () => {
 
   const handleSubmit = async () => {
     if (!crop || !plantingDate || !farmName) {
-      Alert.alert('Error', 'Please fill in all fields.');
+      Alert.alert('Ikosa', 'Nyamuneka wujuje ibisabwa byose.');
       return;
     }
 
@@ -104,7 +104,7 @@ const ScheduleCrop = () => {
         scheduleNotification(task.task, task.date);
       });
 
-      Alert.alert('Schedule Saved', 'You will receive reminders for each task!');
+      Alert.alert('Impuruza Zahinduwe', 'Uzabona impuruza ku kazi kose!');
       setSchedules(updatedSchedules);
     } catch (error) {
       console.error('Error saving schedule:', error);
@@ -113,7 +113,7 @@ const ScheduleCrop = () => {
 
   const scheduleNotification = async (task: string, date: Date) => {
     await Notifications.scheduleNotificationAsync({
-      content: { title: 'Crop Management Task', body: task },
+      content: { title: 'Kazi mu bijyanye n’ubuhinzi', body: task },
       trigger: { date },
     });
   };
@@ -122,7 +122,7 @@ const ScheduleCrop = () => {
     const updatedSchedules = schedules.filter((_, i) => i !== index);
     await AsyncStorage.setItem('schedules', JSON.stringify(updatedSchedules));
     setSchedules(updatedSchedules);
-    Alert.alert('Schedule Deleted', 'The schedule has been successfully deleted.');
+    Alert.alert('Impuruza Ihinduwe', 'Gahunda Yasibwe.');
   };
 
   const onDateChange = (event: any, selectedDate?: Date) => {
@@ -132,48 +132,51 @@ const ScheduleCrop = () => {
     }
   };
 
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('rw-RW', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.label}>Select Crop</Text>
+      <Text style={styles.label}>Hitamo Igihingwa</Text>
       <Picker selectedValue={crop} onValueChange={(value) => setCrop(value)} style={styles.picker}>
-        <Picker.Item label="Select Crop" value="" />
-        <Picker.Item label="Maize" value="maize" />
-        <Picker.Item label="Potato" value="potato" />
+        <Picker.Item label="Hitamo Igihingwa" value="" />
+        <Picker.Item label="Ibigori" value="Ibigori" />
+        <Picker.Item label="Ibirayi" value="Ibirayi" />
       </Picker>
 
-      <Text style={styles.label}>Enter Planting Date</Text>
+      <Text style={styles.label}>Andika Itariki yo Gutera</Text>
       <TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
-        <Text style={styles.dateButtonText}>{plantingDate.toDateString() || 'Select Date'}</Text>
+        <Text style={styles.dateButtonText}>{formatDate(plantingDate) || 'Hitamo Itariki'}</Text>
       </TouchableOpacity>
       {showDatePicker && (
         <DateTimePicker value={plantingDate} mode="date" display="default" onChange={onDateChange} />
       )}
 
-      <Text style={styles.label}>Enter Farm Name</Text>
+      <Text style={styles.label}>Andika Izina ry’Umurima</Text>
       <TextInput
         value={farmName}
         onChangeText={setFarmName}
-        placeholder="Farm Name"
+        placeholder="Izina ry'Umurima"
         style={styles.input}
       />
 
       <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-        <Text style={styles.submitButtonText}>Set Schedule</Text>
+        <Text style={styles.submitButtonText}>Gushyiraho Gahunda</Text>
       </TouchableOpacity>
 
-      {/* Display scheduled tasks */}
       {schedules.length > 0 && (
         <View style={styles.scheduleContainer}>
-          <Text style={styles.scheduleHeader}>Scheduled Tasks:</Text>
+          <Text style={styles.scheduleHeader}>Ibigomba Gukorwa:</Text>
           {schedules.map((schedule, index) => (
             <View key={index} style={styles.schedule}>
               <Text style={styles.scheduleCrop}>{schedule.crop} - {schedule.farmName}</Text>
-              <Text style={styles.scheduleDate}>Planting Date: {new Date(schedule.plantingDate).toDateString()}</Text>
+              <Text style={styles.scheduleDate}>Itariki yo Gutera: {formatDate(new Date(schedule.plantingDate))}</Text>
               {schedule.tasks.map((task, taskIndex) => (
-                <Text key={taskIndex} style={styles.taskDetail}>{`${new Date(task.date).toDateString()}: ${task.task}`}</Text>
+                <Text key={taskIndex} style={styles.taskDetail}>{`${formatDate(new Date(task.date))}: ${task.task}`}</Text>
               ))}
               <TouchableOpacity style={styles.deleteButton} onPress={() => deleteSchedule(index)}>
-                <Text style={styles.deleteButtonText}>Delete Schedule</Text>
+                <Text style={styles.deleteButtonText}>Kuraho Gahunda</Text>
               </TouchableOpacity>
             </View>
           ))}
@@ -185,14 +188,15 @@ const ScheduleCrop = () => {
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1, // Use flexGrow to allow scrolling for all content
+    flexGrow: 1,
     padding: 20,
     backgroundColor: '#f9fafb',
   },
   label: {
-    fontSize: 16,
+    fontSize: 18,
     marginBottom: 5,
-    color: '#1f2937',
+    color: '#374151',
+    fontWeight: '500',
   },
   picker: {
     height: 50,
@@ -200,13 +204,13 @@ const styles = StyleSheet.create({
   },
   dateButton: {
     padding: 15,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: '#d1fae5',
     borderRadius: 5,
     alignItems: 'center',
     marginBottom: 20,
   },
   dateButtonText: {
-    color: '#1f2937',
+    color: '#065f46',
   },
   input: {
     borderWidth: 1,
@@ -217,46 +221,47 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   submitButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#10b981',
     padding: 15,
     borderRadius: 5,
     alignItems: 'center',
   },
   submitButtonText: {
     color: '#ffffff',
-    fontWeight: '600',
+    fontSize: 16,
   },
   scheduleContainer: {
     marginTop: 20,
   },
   scheduleHeader: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#4b5563',
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#065f46',
     marginBottom: 10,
   },
   schedule: {
+    backgroundColor: '#ecfdf5',
+    padding: 15,
+    borderRadius: 5,
     marginBottom: 10,
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#d1d5db',
   },
   scheduleCrop: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#065f46',
   },
   scheduleDate: {
-    fontSize: 14,
-    color: '#6b7280',
+    fontSize: 16,
+    color: '#065f46',
   },
   taskDetail: {
     fontSize: 14,
-    color: '#1f2937',
+    color: '#065f46',
   },
   deleteButton: {
     marginTop: 10,
     padding: 10,
-    backgroundColor: '#ef4444',
+    backgroundColor: '#f87171',
     borderRadius: 5,
     alignItems: 'center',
   },
